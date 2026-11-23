@@ -34,33 +34,82 @@ const businessGroups = [
    ['clipboard','训练任务组织与登记','绑定数据版本、底座、配置和外部任务编号，回收结果','训练任务台账','runs'],
    ['chip','模型服务联调与资源管理','登记服务、并发配额和联调任务，核对外部执行回执','办理联调','svc-supply-models']]]
 ];
-let businessIndexGroup=0, businessIndexSearch='';
-function businessIndexRows(){
- const input=businessIndexSearch.trim().toLowerCase();
- const sections=businessGroups.map(([title,area,entries],i)=>{
-   const active=entries.map(([icon,name,desc,act,key],j)=>({icon,name,desc,act,key,code:'3.'+(i+1)+'.'+(j+1)}))
-      .filter(f=>input?[f.code,f.name,f.desc,area,title].join(' ').toLowerCase().includes(input):businessIndexGroup===i);
-   if(!active.length)return '';
-   return '<section class="biz-section"><header><h2>'+title+'</h2><span>'+area+'</span></header>'+
-     active.map(f=>'<article class="biz-row"><span class="biz-code">'+f.code+'</span><div class="biz-item"><span class="biz-symbol" aria-hidden="true">'+featureIcon(f.icon)+'</span><div><h3>'+f.name+'</h3><p>'+f.desc+'</p></div></div>'+
-       (i>=4 && !svcWriter()?'<span class="biz-role">数据管理员办理</span>':'<button class="btn" type="button" data-biz-open="'+f.code+'">'+f.act+'</button>')+'</article>').join('')+'</section>';
- }).join('');
- return sections||workEmpty('没有匹配的功能','可按名称、操作或章节编号检索。');
+const businessTabNames = ['采集管理', '加工与标注', '存储与目录', '质量与增益', '训练评测服务', '训练支撑'];
+let businessIndexGroup = -1;
+let businessIndexSearch = '';
+
+function businessIndexResults() {
+  const query = businessIndexSearch.trim().toLowerCase();
+  const canManage = svcWriter();
+  let count = 0;
+  const sections = businessGroups.map(([title, area, entries], group) => {
+    if (!query && businessIndexGroup !== -1 && businessIndexGroup !== group) return '';
+    const rows = entries.map(([icon, name, description, action], index) => {
+      if (query && ![name, description, action, title, businessTabNames[group], area].join(' ').toLowerCase().includes(query)) return '';
+      count++;
+      const code = '3.' + (group + 1) + '.' + (index + 1);
+      const control = group >= 4 && !canManage
+        ? '<span class="biz-role">数据管理员办理</span>'
+        : '<button type="button" class="biz-action" data-biz-open="' + code + '">' + action + platIcon('arrow') + '</button>';
+      return '<article class="biz-row"><span class="biz-symbol" aria-hidden="true">' + featureIcon(icon) +
+        '</span><div class="biz-item"><h3>' + name + '</h3><p>' + description + '</p></div>' + control + '</article>';
+    }).filter(Boolean);
+    if (!rows.length) return '';
+    const layout = rows.length >= 3 && rows.length % 2 ? 'biz-entries biz-odd' : 'biz-entries';
+    return '<section class="biz-section" data-family="' + group + '"><header><h2>' + title + '</h2><span>' + area +
+      '</span></header><div class="' + layout + '">' + rows.join('') + '</div></section>';
+  }).join('');
+  const status = query ? '<p class="biz-matches" role="status">找到 ' + count + ' 项功能</p>' : '';
+  return status + (sections || '<div class="biz-empty"><h2>没有找到相关功能</h2><button type="button" class="btn" data-biz-clear>清除搜索</button></div>');
 }
-function renderFunctionIndex(){
- return sectionHead('','业务功能索引','',workBtn('返回工作台','nav','home'))+
- '<div class="biz-layout"><nav class="biz-groups" aria-label="初步设计功能分类">'+businessGroups.map(([name,,items],i)=>
-   '<button type="button" data-biz-group="'+i+'" aria-pressed="'+(!businessIndexSearch&&businessIndexGroup===i)+'"><span>3.'+(i+1)+'</span>'+name+'<small>'+items.length+'</small></button>').join('')+'</nav>'+
- '<div class="biz-main"><label class="biz-search">'+platIcon('search')+'<input type="search" data-biz-find aria-label="查找业务功能" value="'+escapeHtml(businessIndexSearch)+'" placeholder="查找功能名称或章节编号"></label><div id="biz-results">'+businessIndexRows()+'</div></div></div>';
+
+function renderFunctionIndex() {
+  const query = businessIndexSearch.trim();
+  const total = businessGroups.reduce((sum, group) => sum + group[2].length, 0);
+  const tabs = ['全部功能', ...businessTabNames].map((label, position) => {
+    const group = position - 1;
+    const selected = group === (query ? -1 : businessIndexGroup);
+    return '<button type="button" data-biz-group="' + group + '" aria-pressed="' + selected + '">' + label +
+      (group === -1 ? '<span class="biz-total">' + total + '</span>' : '') + '</button>';
+  }).join('');
+  const search = '<div class="biz-search" role="search">' + platIcon('search') +
+    '<input type="search" data-biz-find aria-label="查找业务功能" placeholder="搜索功能或操作" value="' + escapeHtml(businessIndexSearch) +
+    '"><button type="button" class="biz-clear" data-biz-clear aria-label="清除搜索"' + (businessIndexSearch ? '' : ' hidden') + '>×</button></div>';
+  return sectionHead('', '业务功能索引', '', search + workBtn('返回工作台', 'nav', 'home')) +
+    '<div class="biz-layout"><nav class="biz-groups" aria-label="业务功能分类">' + tabs +
+    '</nav><div id="biz-results">' + businessIndexResults() + '</div></div>';
 }
-function refreshBusinessIndex(){
- const body=document.querySelector('#biz-results');if(!body)return;
- body.innerHTML=businessIndexRows();
- document.querySelectorAll('[data-biz-group]').forEach(b=>b.setAttribute('aria-pressed',String(!businessIndexSearch&&Number(b.dataset.bizGroup)===businessIndexGroup)));
+
+function refreshBusinessIndex() {
+  const results = document.querySelector('#biz-results');
+  if (!results) return;
+  results.innerHTML = businessIndexResults();
+  const group = businessIndexSearch.trim() ? -1 : businessIndexGroup;
+  document.querySelectorAll('[data-biz-group]').forEach(button => {
+    button.setAttribute('aria-pressed', String(Number(button.dataset.bizGroup) === group));
+  });
+  document.querySelector('.biz-clear').hidden = !businessIndexSearch;
 }
-document.addEventListener('input',e=>{if(e.target.matches('[data-biz-find]')){businessIndexSearch=e.target.value;refreshBusinessIndex();}});
-document.addEventListener('click',async e=>{
- const group=e.target.closest('[data-biz-group]');if(group){businessIndexGroup=Number(group.dataset.bizGroup);businessIndexSearch='';document.querySelector('[data-biz-find]').value='';refreshBusinessIndex();return;}
+
+document.addEventListener('input', event => {
+  if (event.target.matches('[data-biz-find]')) {
+    businessIndexSearch = event.target.value;
+    refreshBusinessIndex();
+  }
+});
+
+document.addEventListener('click', async e => {
+  const group = e.target.closest('[data-biz-group]');
+  const clear = e.target.closest('[data-biz-clear]');
+  if (group || clear) {
+    if (group) businessIndexGroup = Number(group.dataset.bizGroup);
+    businessIndexSearch = '';
+    const input = document.querySelector('[data-biz-find]');
+    input.value = '';
+    refreshBusinessIndex();
+    if (clear) input.focus();
+    return;
+  }
  const b=e.target.closest('[data-biz-open]');if(!b)return;
  const code=b.dataset.bizOpen,[,g,num]=code.split('.').map(Number),action=businessGroups[g-1][2][num-1][4];
  b.disabled=true;
