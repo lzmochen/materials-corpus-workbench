@@ -9,7 +9,7 @@
 
   function activeWorker() {
     if (worker) return worker;
-    worker = new Worker('/materials-corpus-workbench/browser-worker.js');
+    worker = new Worker('/materials-corpus-workbench/browser-worker.js?v=889f95d6c0cf');
     worker.onmessage = event => {
       const packet = event.data;
       const resolve = waiting.get(packet.id);

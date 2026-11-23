@@ -322,6 +322,18 @@ function reviewOwner(username) { return reviewOwnerNames[username] || username |
 function reviewListHeader(title, count, actions='') {
   return `<header class="rd-list-head"><h2>${exText(title)} <span>${count}</span></h2>${actions}</header>`;
 }
+function reviewSourceShelf(title,sources,action) {
+  if(!sources.length)return '';
+  const rows=sources.map(r=>{
+    const meta=[guideFamily(r),r.topic].filter(Boolean).map(exText).join(' · ');
+    return '<li><button class="rd-source-name" type="button" data-action="resource-open" data-id="'+exText(r.id)+'">'+exText(r.title)+'</button>'+
+      (meta?'<p>'+meta+'</p>':'')+(action?action(r):'')+'</li>';
+  }).join('');
+  return '<aside class="rd-panel rd-sources">'+reviewListHeader(title,sources.length)+'<ul>'+rows+'</ul></aside>';
+}
+function reviewWorkspace(main,shelf) {
+  return '<div class="rd-workspace'+(shelf?' rd-with-shelf':'')+'"><div class="rd-primary">'+main+'</div>'+shelf+'</div>';
+}
 function reviewRecordRow(cells,search,extra='') {
   return {search, html:`<tr data-rd-row data-rd-text="${exText(search)}"${extra}>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`};
 }
@@ -337,13 +349,13 @@ function reviewListPage(key,rows) {
 function reviewFooter(count,page,pages) {
   return `<span role="status">共 <b>${count}</b> 项</span><div><button type="button" data-rd-turn="-1" aria-label="上一页"${page===1?' disabled':''}>上一页</button><span>${page} / ${pages}</span><button type="button" data-rd-turn="1" aria-label="下一页"${page>=pages?' disabled':''}>下一页</button></div>`;
 }
-function reviewDirectory(key,headings,rows,searchLabel,controls='',tools='') {
+function reviewDirectory(key,headings,rows,searchLabel,controls='',tools='',empty='没有匹配的记录') {
   const state=reviewListState[key], {matches,pages,visible}=reviewListPage(key,rows);
   const rowHtml=rows.map(r=>visible.has(r)?r.html:r.html.replace('<tr ','<tr hidden ')).join('');
   return `<div class="rd-directory" data-rd-directory="${key}">${controls}
     <div class="rd-filters"><label class="rd-search"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5"/></svg><input type="search" data-rd-query aria-label="${exText(searchLabel)}" value="${exText(state.query)}" placeholder="${exText(searchLabel)}"></label>${tools}</div>
     <div class="rd-table-scroll"><table class="rd-table"><thead><tr>${headings.map(h=>`<th scope="col">${exText(h)}</th>`).join('')}</tr></thead><tbody>${rowHtml}</tbody></table></div>
-    <p class="rd-empty" data-rd-empty${matches.length?' hidden':''}>没有匹配的记录</p>
+    <p class="rd-empty" data-rd-empty${matches.length?' hidden':''}>${empty}</p>
     <footer class="rd-pagination" data-rd-footer>${reviewFooter(matches.length,state.page,pages)}</footer></div>`;
 }
 function reviewUpdateDirectory(root) {
@@ -585,11 +597,20 @@ async function renderBenchmarks() {
   });
   const create=exAllowed('operator','lead','admin')?exButton('新建评测基准','benchmark-new','',{primary:true}):'';
   const sources=workScopeRows(resources,'benchmarks').filter(r=>r.split==='holdout' && r.researchCase && !workCan('annotator')).sort((a,b)=>workCaseRank(a)-workCaseRank(b));
-  const papers=sources.length ? '<section class="rd-panel">'+reviewListHeader('科研留出文献',sources.length)+workTable(['文献摘录','制题进度'],sources.map(r=>{
+  const papers=reviewSourceShelf('科研留出文献',sources,r=>{
     const b=allBenchmarks.find(item=>item.items?.some(i=>i.resourceId===r.id));
-    return [workBtn(r.title,'resource-open',r.id),b?reviewNameButton(b.title,'benchmark-select',b.id):exButton('查看标注与制题条件','paper-handoff',r.researchCase==='sic-solvent-growth-v1'?'crystal':'research')];
-  }))+'</section>' : '';
-  return sectionHead('','基准评审与发布','',create)+papers+`<section class="rd-panel">${reviewListHeader('基准目录',benchmarks.length,workScopeMenu('benchmarks'))}${reviewDirectory('benchmarks',['评测基准','题数','评审进度','命题人','状态'],rows,'搜索基准名称或编号',tabs)}</section>`;
+    return b?reviewNameButton(b.title,'benchmark-select',b.id):exButton('查看制题条件','paper-handoff',r.researchCase==='sic-solvent-growth-v1'?'crystal':'research');
+  });
+  const empty=benchmarks.length ? '没有匹配的记录' : '当前范围暂无评测基准。'+(exAllowed('operator','lead','admin') ? workBtn('打开基准设计与制备','nav','benchmark-work','link') : '');
+  const directory='<section class="rd-panel">'+reviewListHeader('基准目录',benchmarks.length,workScopeMenu('benchmarks'))+
+    reviewDirectory('benchmarks',['评测基准','题数','评审进度','命题人','状态'],rows,'搜索基准名称或编号',tabs,'',empty)+'</section>';
+  let coverage='';
+  if(!benchmarks.length && workScopeValue('benchmarks')==='active' && exAllowed('operator','lead','admin')) {
+    const template=await api('/api/benchmark-work/template');
+    if(revision!==workView)return '';
+    coverage=blueprintCoveragePreview(template);
+  }
+  return sectionHead('','基准评审与发布','',create)+reviewWorkspace(directory+coverage,papers);
 }
 
 async function exLoadResourceVersions(form, preserveVersion = '', selection = []) {

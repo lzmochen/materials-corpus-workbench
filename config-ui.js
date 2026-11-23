@@ -9,7 +9,7 @@ function tplFieldRow(value='',enabled=true) {
 }
 async function templateList() {
   const [custom,builtins] = await Promise.all([api(tplPath),api('/api/luoshu/templates')]);
-  const rows = [...custom,...builtins.filter(t=>t.id!=='custom')].map(t=>{
+  const rows = [...custom,...builtins.filter(t=>t.fields.length)].map(t=>{
     const system = !t.revision;
     return [`<strong>${escapeHtml(t.name)}</strong>`, system?'系统模板':'自建模板',
       escapeHtml(t.fields.join('、')),system?'—':`v${t.revision}`,

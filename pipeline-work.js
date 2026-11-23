@@ -107,7 +107,7 @@ function pipePreviewForm(lockedSource){
   const initial=choices[0];
   openModal('新建制备任务','<form class="stack pw-form" data-pipe-form="create"><label class="field">输入版本<select name="versionId">'+workSelect(options,initial.versionId)+'</select></label>'
     +'<label class="field">制备方式<select name="recipe">'+workSelect(Object.entries(pipeRecipes),'extract')+'</select></label>'
-    +'<label class="field" data-pipe-field="template">抽取模板<select name="template">'+workSelect([['properties','材料性能与测试'],['materials','材料综合属性'],['process','材料制备与热处理工艺']])+'</select></label>'
+    +'<label class="field" data-pipe-field="template">抽取模板<select name="template">'+workSelect([['source','按原文字段抽取'],['properties','材料性能与测试'],['materials','材料综合属性'],['process','材料制备与热处理工艺']])+'</select></label>'
     +'<label class="field" data-pipe-field="limit" hidden>候选数上限<input name="maxCandidates" type="number" min="1" max="200" step="1" value="40" disabled required></label>'
     +workField('任务名称','title',{max:150,value:initial.title+' · '+pipeRecipes.extract})
     +'<div data-pipe-preview aria-live="polite">先预览匹配到的原文证据，再开始制备。</div><div class="actions">'+workBtn('取消','dialog-close')+pipeButton('preview','预览匹配结果')+'<button type="submit" class="btn primary" disabled>开始制备</button></div></form>');
@@ -170,6 +170,13 @@ document.addEventListener('click',async event=>{
     if(action==='create')return pipePreviewForm();
     if(action==='tab'){pipeUi.tab=btn.dataset.id;await refresh();return;}
     if(action==='record')return pipeRecord(btn.dataset.id);
+    if(action==='use-source'){
+      const form=btn.form;
+      form.elements.template.value='source';
+      form.elements.template.dispatchEvent(new Event('change',{bubbles:true}));
+      form.querySelector('[data-pipe="preview"]').click();
+      return;
+    }
     if(action==='preview'){
       const form=btn.form;
       if(!form.reportValidity())return;
@@ -177,7 +184,11 @@ document.addEventListener('click',async event=>{
       form.querySelector('[data-pipe-preview]').textContent='正在核对原文证据…';
       const result=await api(pipeBase+'/preview','POST',cfg);
       if(!form.isConnected||JSON.stringify({...cfg,title:''})!==JSON.stringify({...pipeConfig(form),title:''}))return;
-      form.querySelector('[data-pipe-preview]').innerHTML='<section class="pw-preview"><h3>'+result.sourceBlocks+' 个源证据块 · '+result.count+(cfg.recipe==='extract'?' 条待核查属性':' 条候选问答')+'</h3>'
+      const region=form.querySelector('[data-pipe-preview]');
+      if(cfg.recipe==='extract'){
+        region.innerHTML=lsMatchPreview(result,'data-pipe="use-source"');
+        if(!result.count&&!result.alternatives?.length)region.insertAdjacentHTML('beforeend',workBtn('对照原文配置字段','work-extraction-create',cfg.resourceId+'|'+cfg.versionId,'small'));
+      }else region.innerHTML='<section class="pw-preview"><h3>'+result.sourceBlocks+' 个源证据块 · '+result.count+' 条候选问答</h3>'
         +(result.count?workTable(['匹配内容','取值／答案','原文位置'],result.examples.map(row=>[escapeHtml(row.label),escapeHtml(row.answer),escapeHtml(row.location)])):'<p>当前源版本没有匹配内容，请更换模板或制备方式。</p>')+'</section>';
       form.querySelector('[type="submit"]').disabled=!result.count;
       return;

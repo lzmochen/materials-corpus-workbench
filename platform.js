@@ -81,7 +81,7 @@ function platformResourceHead() {
     if (!key) return `<li class="p-status-entry">${content}</li>`;
     return `<li><button type="button" class="p-status-entry" data-resource-state="${key}" aria-pressed="${workFilter.status===key}" aria-label="筛选${escapeHtml(label)}，${count}份，占${pct}%" title="筛选${escapeHtml(label)}，再次点击恢复全部状态">${content}</button></li>`;
   }).join('');
-  return `<header class="p-cover"><div class="p-cover-identity"><h1>${platformModules[0].label}</h1><span class="p-version-total">原文版本 <strong>${versions}</strong> 个</span></div>
+  return `<header class="p-cover"><div class="p-cover-identity"><div class="p-page-title"><span class="p-page-symbol">${platIcon("archive")}</span><h1>${platformModules[0].label}</h1></div><span class="p-version-total">原文版本 <strong>${versions}</strong> 个</span></div>
     <section class="p-status-summary" aria-label="资源状态"><div class="p-status-ring" aria-label="资源总数 ${total} 份" style="--sectors:${background}"><div class="p-ring-center"><strong>${total}</strong></div></div>
     <div class="p-status-breakdown"><h2>资源状态</h2><ul class="p-status-legend">${legend}</ul></div></section></header>`;
 }
@@ -118,7 +118,9 @@ function platformMount(route,html) {
   }
   old?.remove();
   const parent=mod?.key==='generation' && route!==mod.key ? `<button class="p-parent" type="button" data-action="nav" data-id="generation">${escapeHtml(mod.label)}</button><span class="p-slash">/</span>` : '';
-  const header=route==='home' ? '' : route==='resources' ? platformResourceHead() : `<header class="p-page-head"><div class="p-page-name">${parent}<h1>${escapeHtml(title)}</h1></div><div class="section-actions">${actions}</div></header>`;
+  const icons={workflow:'nodes',research:'book',crystal:'book',audit:'score',accounts:'person',jobs:'inbox'};
+  const symbol=platIcon(mod?.icon || icons[route] || 'book');
+  const header=route==='home' ? '' : route==='resources' ? platformResourceHead() : `<header class="p-page-head"><div class="p-page-name">${parent}<div class="p-page-title"><span class="p-page-symbol">${symbol}</span><h1>${escapeHtml(title)}</h1></div></div><div class="section-actions">${actions}</div></header>`;
   root.dataset.route=route;
   const caseBack=caseChoice.resourceId && !['workflow','research','crystal','home','generation','jobs','accounts','audit'].includes(route)
     ? `<button class="ct-return" type="button" data-action="nav" data-id="workflow">${workIcon('chevron')}返回办理进度</button>` : '';

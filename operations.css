@@ -315,3 +315,12 @@ pre { background:#f1f1eb; border-color:var(--line); border-radius:2px; color:var
   .ls-record .ls-fields label { grid-column:auto; }
   .tpl-field-row { gap:5px; }
 }
+
+.ls-match{border:1px solid var(--campus-line,var(--line));border-radius:7px;overflow:hidden;min-width:0}
+.ls-match header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 13px;background:var(--campus-wash,#f5f8fb)}
+.ls-match header span{font-size:.88em;color:var(--muted)}
+.ls-match .ls-table{margin:0}.ls-match table{min-width:0}.ls-match td{overflow-wrap:anywhere}
+.ls-match-empty{padding:12px 14px;border-left:3px solid #bb8428}
+.ls-match-empty p,.ls-match-empty details{margin:8px 0 0}
+.ls-match-empty button{margin-top:9px}.ls-match-empty summary{cursor:pointer;color:var(--accent)}
+.ls-match-empty blockquote{margin:8px 0 0;border-left:2px solid var(--line);padding:4px 10px;overflow-wrap:anywhere}

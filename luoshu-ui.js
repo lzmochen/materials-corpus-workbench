@@ -183,8 +183,61 @@ function lsSourceOptions(kind,selected) {
 function lsTemplateFields(id) {
   const tpl=lsState.templates.find(item=>item.key===id);
   if (!tpl) return '';
+  if (tpl.id==='source') return '';
   if (tpl.id==='custom' && !tpl.config) return '<label class="field">抽取字段（每行一项）<textarea name="fields" required rows="4"></textarea></label>';
   return `<div class="field">抽取字段<div class="ls-field-tags">${tpl.fields.map(field=>`<span>${lsEsc(field)}</span>`).join('')}</div></div>`;
+}
+function lsExtractionInput(form) {
+  const [resourceId,versionId]=form.elements.source.value.split('|');
+  const tpl=lsState.templates.find(t=>t.key===form.elements.template.value);
+  if(!resourceId||!versionId||!tpl)return null;
+  const input={resourceId,versionId,template:tpl.config?'custom':tpl.id};
+  if(tpl.config){input.fields=tpl.fields;input.templateLabel=tpl.name;}
+  else if(tpl.id==='custom')input.fields=form.elements.fields.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  return input;
+}
+function lsMatchPreview(result, sourceAction) {
+  if(result.count){
+    const rows=result.examples.map(row=>[lsEsc(row.label),lsEsc(row.answer),lsEsc(row.location)]);
+    return '<section class="ls-match"><header><strong>可抽取 '+result.count+' 条记录</strong><span>'+result.sourceBlocks+' 个原文证据块</span></header>'+
+      lsTable(['原文字段','取值摘录','证据位置'],rows)+'</section>';
+  }
+  const names=result.alternatives||[];
+  const fields=result.fields||[];
+  const source=result.sourceExcerpt;
+  const reason=fields.length?'本版原文没有与「'+lsEsc(fields.slice(0,5).join('、'))+(fields.length>5?'等':'')+'」对应的明确取值。':'本版原文没有可识别的字段与取值。';
+  const fix=names.length?'<p>可用原文字段：'+names.map(lsEsc).join('、')+'</p><button class="btn small" type="button" '+sourceAction+'>改用原文字段并预览</button>':'<p>请核对源文件版本，或在原文中确认属性名及取值后改用自定义字段。</p>';
+  return '<section class="ls-match ls-match-empty"><strong>未找到可抽取的记录</strong><p>'+reason+'</p>'+fix+
+    (source?.text?'<details><summary>查看原文片段 · '+lsEsc(source.location)+'</summary><blockquote>'+lsEsc(source.text)+'</blockquote></details>':'')+'</section>';
+}
+const lsPreviewTimers=new WeakMap();
+function lsSchedulePreview(form,delay=0) {
+  clearTimeout(lsPreviewTimers.get(form));
+  const region=form.querySelector('[data-ls-preview]');
+  const submit=form.querySelector('[type="submit"]');
+  const request=Number(form.dataset.previewRequest||0)+1;
+  form.dataset.previewRequest=String(request);
+  delete form.dataset.previewInput;
+  submit.disabled=true;
+  const input=lsExtractionInput(form);
+  if(!input||input.fields?.length===0){
+    region.textContent=input?'输入需要抽取的字段后可预览。':'请选择已核准的原文版本。';
+    return;
+  }
+  region.textContent='正在核对原文…';
+  lsPreviewTimers.set(form,setTimeout(async()=>{
+    if(!form.isConnected||Number(form.dataset.previewRequest)!==request)return;
+    try{
+      const result=await api(lsApi+'/extractions/preview','POST',input);
+      if(!form.isConnected||Number(form.dataset.previewRequest)!==request)return;
+      region.innerHTML=lsMatchPreview(result,'data-ls-use-source');
+      if(result.count){form.dataset.previewInput=JSON.stringify(input);submit.disabled=false;}
+    }catch(error){
+      if(form.isConnected&&Number(form.dataset.previewRequest)===request){
+        region.innerHTML='<p>'+lsEsc(error.message)+'</p><button class="btn small" type="button" data-ls-preview-retry>重新预览</button>';
+      }
+    }
+  },delay));
 }
 async function createLuoshuTask(source='') {
   if (!lsWrite()) throw new Error('当前岗位无权创建抽取任务');
@@ -200,14 +253,15 @@ async function createLuoshuTask(source='') {
     return;
   }
   const selected=lsState.sources.find(item=>item.id===source) || (!source.includes('|') && lsState.sources.find(item=>item.resourceId===source && item.active));
-  const defaultTemplate=lsState.templates.find(item=>item.id==='materials') || lsState.templates[0];
+  const defaultTemplate=lsState.templates.find(item=>item.id==='source') || lsState.templates[0];
   if (!defaultTemplate) throw new Error('未找到可用抽取模板');
   openModal('新建抽取任务',workModalForm('ls-create',`
     <div class="ls-fields"><label class="field">原文类型<select id="ls-source-kind">${workSelect(lsSourceTypes)}</select></label>
       <label class="field">已核准源版本<select name="source" required>${lsSourceOptions('',selected?.id)}</select></label></div>
     <label class="field">任务名称（可选）<input name="title" maxlength="180"></label>
     <label class="field">抽取模板<select name="template" id="ls-create-template">${workSelect(lsState.templates.map(item=>[item.key,item.name]),defaultTemplate.key)}</select></label>
-    <div id="ls-template-fields">${lsTemplateFields(defaultTemplate.key)}</div>`, '执行抽取'));
+    <div id="ls-template-fields">${lsTemplateFields(defaultTemplate.key)}</div><div data-ls-preview aria-live="polite"></div>`, '执行抽取'));
+  lsSchedulePreview(wb('form[data-form="ls-create"]'));
 }
 function lsCsvCell(value) {
   const raw=String(value??'');
@@ -262,12 +316,9 @@ async function handleLuoshuSubmit(form) {
   const formType=form.dataset.form;
   const values=new FormData(form);
   if (formType==='ls-create') {
-    const [resourceId,versionId]=String(values.get('source')||'').split('|');
-    const tpl=lsState.templates.find(item=>item.key===values.get('template'));
-    if (!resourceId || !versionId || !tpl) throw new Error('请选择源版本与抽取模板');
-    const payload={resourceId,versionId,title:String(values.get('title')||'').trim(),template:tpl.config?'custom':tpl.id};
-    if (tpl.config) {payload.fields=tpl.fields;payload.templateLabel=tpl.name;}
-    else if (tpl.id==='custom') payload.fields=String(values.get('fields')||'').split(/\r?\n/).map(item=>item.trim()).filter(Boolean);
+    const input=lsExtractionInput(form);
+    if(!input || JSON.stringify(input)!==form.dataset.previewInput){lsSchedulePreview(form);return true;}
+    const payload={...input,title:String(values.get('title')||'').trim()};
     const task=await api(lsApi+'/extractions','POST',payload);
     closeModal();
     await openLuoshuTask(task.id);
@@ -334,14 +385,25 @@ async function handleLuoshuAction(action,el) {
 }
 document.addEventListener('input',event=>{
   const el=event.target;
+  if(el.name==='fields' && el.form?.dataset.form==='ls-create')lsSchedulePreview(el.form,220);
   if (el.id==='ls-task-query') {lsState.taskQuery=el.value;document.querySelector('#ls-task-rows').innerHTML=lsTaskRows();}
   if (el.id==='ls-knowledge-query') {lsState.knowledgeQuery=el.value;lsState.knowledgePage=0;lsRenderKnowledge();}
+});
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-ls-use-source],[data-ls-preview-retry]');
+  if(!button?.form)return;
+  if(button.hasAttribute('data-ls-use-source')){
+    button.form.elements.template.value='source';
+    button.form.querySelector('#ls-template-fields').innerHTML=lsTemplateFields('source');
+  }
+  lsSchedulePreview(button.form);
 });
 document.addEventListener('change',async event=>{
   const el=event.target;
   try {
     if (el.id==='ls-source-kind') {const source=el.form.elements.source;source.innerHTML=lsSourceOptions(el.value,source.value);}
     if (el.id==='ls-create-template') document.querySelector('#ls-template-fields').innerHTML=lsTemplateFields(el.value);
+    if(el.form?.dataset.form==='ls-create' && (el.id==='ls-source-kind'||el.name==='template'||el.name==='source'))lsSchedulePreview(el.form);
     if (el.id==='ls-task-picker') {lsState.taskId=el.value;lsState.recordId='';lsState.recordStatus='';await refresh();}
     if (el.id==='ls-record-status') {lsState.recordStatus=el.value;lsState.recordId='';lsRenderReview();}
     if (el.id==='ls-record-picker') {lsState.recordId=el.value;lsRenderReview();}

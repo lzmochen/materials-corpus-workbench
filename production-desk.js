@@ -1,7 +1,7 @@
 'use strict';
 
 const productionStages = [['prepare','语料制备'],['quality','质检与选样'],['delivery','发布与训练']];
-const productionDesk = {stage:'prepare', prepareFilter:'', prepareRuns:[], opening:'', query:'', family:'', topic:'', status:'', page:0, batches:[]};
+const productionDesk = {stage:'prepare', opening:'', query:'', family:'', topic:'', status:'', page:0, batches:[]};
 
 function productionControl(attrs, label, extra='') {
   return '<button type="button" class="pd-link '+extra+'" '+attrs+'>'+escapeHtml(label)+'</button>';
@@ -19,22 +19,89 @@ function productionList(headers, rows, empty) {
   return rows.length ? workTable(headers,rows) : workEmpty(empty);
 }
 function productionUpdated(row) { return row.updatedAt || row.publishedAt || row.createdAt || row.at || ''; }
-function productionRecent(records) {
-  return workScopeRows(records,'production').slice().sort((a,b)=>workCaseRank(a)-workCaseRank(b) || productionUpdated(b).localeCompare(productionUpdated(a))).slice(0,5);
+const productionLedgerSize = 10;
+let productionLedger = null;
+let productionView = null;
+
+function productionLedgerFilterRows() {
+  const {query, state, kind} = productionView;
+  const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  return productionLedger.records.filter(row =>
+    (!state || row.state === state) && (!kind || row.kind === kind) &&
+    terms.every(term => row.searchText.includes(term)));
 }
-function productionQueue(runs) {
-  const visible=workScopeRows(runs,'production');
-  const stage=productionDesk.prepareFilter;
-  const options=[['','全部'],['review','待核查'],['generation','可合成'],['quality','待质检']];
-  const filters=options.map(([value,label])=>{
-    const count=value?visible.filter(run=>run.state===value).length:visible.length;
-    return '<button type="button" data-pd="queue-filter" data-id="'+value+'" aria-pressed="'+(stage===value)+'">'+label+' <b>'+count+'</b></button>';
-  }).join('');
-  const matches=visible.filter(row=>!stage||row.state===stage).sort((a,b)=>productionUpdated(b).localeCompare(productionUpdated(a)));
-  const records=productionList(['任务名称','制备方式','当前状态','更新时间'],matches.slice(0,5).map(productionPipeRow),stage?'当前范围没有此状态的任务':'暂无制备任务');
-  return productionPanel('最近制备任务',productionControl(productionAction('queue-all'),'全部任务'),
-    '<div class="pd-queue-filters" role="group" aria-label="按制备进度筛选">'+filters+'</div>'+records);
+
+function productionLedgerResults() {
+  const ledger=productionLedger, view=productionView;
+  const rows=productionLedgerFilterRows();
+  const pages=Math.max(1,Math.ceil(rows.length/productionLedgerSize));
+  view.page=Math.max(0,Math.min(view.page,pages-1));
+  const start=view.page*productionLedgerSize, end=Math.min(start+productionLedgerSize,rows.length);
+  const body=rows.slice(start,end).map(row=>[
+    productionName(row.title,row.attrs)+(row.source&&row.source!==row.title?'<span class="pd-origin">'+escapeHtml(row.source)+'</span>':''),
+    escapeHtml(row.kind),row.result,workTime(row.at)
+  ]);
+  const filtered=Boolean(view.query||view.state||view.kind);
+  const records=productionList(ledger.headers,body,filtered?'没有符合筛选条件的记录':ledger.empty);
+  const reset=filtered&&!rows.length?'<div class="pd-reset">'+productionControl(productionAction('queue-clear'),'清除筛选')+'</div>':'';
+  return records+reset+'<div class="pd-pager pd-ledger-pages"><span aria-live="polite">'+(rows.length?'显示 '+(start+1)+'–'+end+' 条，共 '+rows.length+' 条':'0 条记录')+'</span><div>'+
+    '<button type="button" data-pd="queue-page" data-id="-1" '+(!view.page?'disabled':'')+'>上一页</button><span>'+ (view.page+1)+' / '+pages+'</span>'+
+    '<button type="button" data-pd="queue-page" data-id="1" '+(view.page+1>=pages?'disabled':'')+'>下一页</button></div></div>';
 }
+
+function productionQueueFilters() {
+  const states=productionLedger.states || [];
+  if(!states.length) return '';
+  return '<div class="pd-queue-filters" role="group" aria-label="按制备进度筛选">'+states.map(([id,label])=>{
+    const count=id?productionLedger.records.filter(row=>row.state===id).length:productionLedger.records.length;
+    return '<button type="button" '+productionAction('queue-filter',id)+' aria-pressed="'+(productionView.state===id)+'">'+escapeHtml(label)+' <b>'+count+'</b></button>';
+  }).join('')+'</div>';
+}
+
+function productionLegend() {
+  const counts=new Map();
+  for(const row of productionLedger.records)counts.set(row.kind,(counts.get(row.kind)||0)+1);
+  if(!counts.size)return '';
+  const rows=[...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'zh'));
+  return '<section class="pd-panel pd-mix"><div class="pd-side-title"><h2>'+escapeHtml(productionLedger.distribution)+'</h2>'+
+    (productionView.kind?productionControl(productionAction('queue-kind'),'清除筛选'):'')+'</div>'+
+    '<div class="pd-mix-list">'+rows.map(([kind,total])=>{
+      const pct=total*100/productionLedger.records.length;
+      return '<button type="button" '+productionAction('queue-kind',kind)+' aria-pressed="'+(productionView.kind===kind)+'">'+
+        '<span>'+escapeHtml(kind)+'</span><b>'+total+' <small>条</small></b><i><em style="width:'+pct.toFixed(2)+'%"></em></i></button>';
+    }).join('')+'</div></section>';
+}
+
+function productionSyncLedger() {
+  const root=document.querySelector('[data-pd-ledger]');
+  if(!root||!productionLedger||!productionView)return;
+  root.querySelector('[data-pd-rows]').innerHTML=productionLedgerResults();
+  root.querySelector('[data-pd-states]').innerHTML=productionQueueFilters();
+  root.querySelector('[data-pd-mix]').innerHTML=productionLegend();
+  const query=root.querySelector('[data-pd-search]');
+  if(query.value!==productionView.query)query.value=productionView.query;
+  history.replaceState({...history.state,productionView},'');
+}
+
+function productionLedgerLayout(spec, tools, more) {
+  const stage=productionDesk.stage,actor=window.workspaceUser.username,scope=workScopeValue('production');
+  const saved=history.state?.productionView;
+  productionView=saved?.actor===actor && saved.stage===stage && saved.scope===scope ? {...saved} :
+    {stage,actor,scope,query:'',state:'',kind:'',page:0};
+  const records=workScopeRows(spec.records,'production').sort((a,b)=>b.at.localeCompare(a.at));
+  productionLedger={...spec,records:records.map(row=>({...row,
+    searchText:[row.title,row.source,row.id,row.kind].filter(Boolean).join(' ').toLocaleLowerCase()
+  }))};
+  if(!records.some(row=>row.kind===productionView.kind))productionView.kind='';
+  const query='<label class="pd-ledger-search">'+platIcon('search')+'<input type="search" data-pd-search aria-label="搜索记录名称、来源或编号" placeholder="搜索名称、来源或编号" value="'+escapeHtml(productionView.query)+'"></label>';
+  const ledger='<section class="pd-panel pd-ledger"><header class="pd-panel-head"><h2 tabindex="-1">'+escapeHtml(spec.title)+'</h2>'+query+'</header>'+
+    '<div data-pd-states>'+productionQueueFilters()+'</div><div data-pd-rows>'+productionLedgerResults()+'</div></section>';
+  const side='<aside class="pd-sidebar"><section class="pd-panel pd-services"><div class="pd-side-title"><h2>'+escapeHtml(spec.toolsTitle)+'</h2>'+more+'</div><div class="pd-tools">'+tools+'</div></section>'+
+    '<div data-pd-mix>'+productionLegend()+'</div></aside>';
+  return '<div class="pd-desk pd-workspace" data-pd-ledger><section class="pd-stage-head">'+productionStageNav()+workScopeMenu('production')+
+    '</section><div class="pd-stage-body">'+ledger+side+'</div></div>';
+}
+
 function productionPipeRow(r) {
   return [productionName(r.title,productionAction('pipe',r.id)),escapeHtml(pipeRecipes[r.recipe] || r.recipe),pipeBadge(r.state),workTime(productionUpdated(r))];
 }
@@ -46,60 +113,54 @@ async function renderProductionDesk() {
   const restored=history.state?.productionStage;
   if(productionStages.some(([key])=>key===restored))productionDesk.stage=restored;
   const stage=productionDesk.stage, actor=window.workspaceUser.username;
-  let tools,more='',desk;
+  let tools, more='', spec;
   let actions=workBtn('全流程办理','nav','workflow');
   if (stage==='prepare') {
-    const [data,resources,batches]=await Promise.all([api(pipeBase),api('/api/resources'),api('/api/batches')]);
-    const sources=new Map(resources.map(r=>[r.id,r]));
-    const sourceOfBatch=new Map(batches.map(r=>[r.id,r.resourceId]));
-    const runs=data.runs.map(r=>({...r,researchCase:sources.get(r.resourceId || sourceOfBatch.get(r.id))?.researchCase}));
+    const data=await api(pipeBase);
     if(pipeWriter()) actions+='<button type="button" class="btn primary" data-pd="new-pipe">'+workIcon('plus')+'新建制备任务</button>';
-    tools=productionTool('steps','制备管线','从原文核查到问答合成',productionAction('pipes'))
+    tools=productionTool('steps','制备管线','核查原文、合成问答',productionAction('pipes'))
       +productionTool('sheets','知识抽取与核查','提取材料、性能与工艺字段',productionAction('extract'))
-      +productionTool('rows','语料批次','导入教师候选，审查训练问答',productionRoute('batches'));
+      +productionTool('rows','语料批次','审核问答、移交标注',productionRoute('batches'));
     more='<details class="pd-more"><summary>辅助工具</summary><div>'
       +(lsWrite()?workBtn('模板管理','ls-config'):'')
       +productionControl('data-guide="pairs"','图文语料配对')+'</div></details>';
-    if(window.workspacePage!=='generation'||window.workspaceUser?.username!==actor)return '';
-    productionDesk.prepareRuns=runs;
-    desk='<div id="pd-prepare-queue">'+productionQueue(runs)+'</div>';
+    spec={title:'制备任务',toolsTitle:'制备工具',distribution:'制备方式分布',empty:'当前范围暂无制备任务',
+      headers:['任务与来源','制备方式','当前状态','更新时间'],
+      states:[['','全部'],['review','待核查'],['generation','可合成'],['quality','待质检'],['finished','已质检']],
+      records:data.runs.map(r=>({...r,at:productionUpdated(r),source:r.sourceTitle,kind:pipeRecipes[r.recipe]||r.recipe,
+        result:pipeBadge(r.state),attrs:productionAction('pipe',r.id)}))};
   } else if (stage==='quality') {
-    const [sets,quality,batches,resources]=await Promise.all(['/api/distillations','/api/quality-work','/api/batches','/api/resources'].map(path=>api(path)));
+    const [sets,quality,batches]=await Promise.all(['/api/distillations','/api/quality-work','/api/batches'].map(path=>api(path)));
     tools=productionTool('shield','样本质量评价','逐条核对规则分和原文证据',productionAction('quality','samples'))
       +productionTool('sheets','跨源一致性','比对试样、单位和试验条件',productionAction('quality','cross'))
       +productionTool('rows','蒸馏选集','按质量门槛与材料覆盖选样','data-distill="library"');
-    const entries=[
-      ...quality.runs.map(r=>({title:r.title,kind:'跨源核查',at:r.at,amount:Object.values(r.counts||{}).reduce((sum,n)=>sum+n,0)+' 个对照项',attrs:productionAction('quality-run',r.id)})),
-      ...sets.map(r=>({title:r.title,kind:'蒸馏选集',at:r.createdAt,amount:r.count+' 条入选',attrs:'data-distill="open" data-id="'+escapeHtml(r.id)+'"'})),
-      ...batches.filter(r=>r.status==='reviewed').map(r=>({catalogTier:r.catalogTier,researchCase:resources.find(src=>src.id===r.resourceId)?.researchCase,title:r.title,kind:'样本质检',at:productionUpdated(r),amount:(r.counts?.passed||0)+' 条通过',attrs:'data-action="batch-quality-details" data-id="'+escapeHtml(r.id)+'"'}))
+    const records=[
+      ...quality.runs.map(r=>({...r,kind:'跨源核查',at:productionUpdated(r),result:Object.values(r.counts||{}).reduce((sum,n)=>sum+n,0)+' 个对照项',attrs:productionAction('quality-run',r.id)})),
+      ...sets.map(r=>({...r,kind:'蒸馏选集',at:productionUpdated(r),result:r.count+' 条入选',attrs:'data-distill="open" data-id="'+escapeHtml(r.id)+'"'})),
+      ...batches.filter(r=>r.status==='reviewed').map(r=>({...r,kind:'样本质检',at:productionUpdated(r),result:(r.counts?.passed||0)+' 条通过',attrs:'data-action="batch-quality-details" data-id="'+escapeHtml(r.id)+'"'}))
     ];
-    desk=productionPanel('最近核查与选样记录','',productionList(['记录名称','类型','记录数量','建立时间'],
-      productionRecent(entries).map(r=>[productionName(r.title,r.attrs),r.kind,escapeHtml(r.amount),workTime(r.at)]),'暂无样本质检、跨源核查或选样记录'));
+    spec={title:'核查与选样记录',toolsTitle:'质检与选样工具',distribution:'核查与选样分布',empty:'暂无样本质检、跨源核查或选样记录',headers:['记录名称','业务类型','核查与选样结果','更新时间'],records};
   } else {
     const [versions,runs,feedback]=await Promise.all(['/api/releases','/api/runs','/api/feedback'].map(path=>api(path)));
     tools=productionTool('box','数据发布','冻结版本，登记交付与下载',productionRoute('releases'))
       +productionTool('chart','训练实验','登记训练配置，对比实测指标',productionRoute('runs'))
       +productionTool('target','评测问题回流','受理错题反馈，追踪补充任务',productionAction('feedback'));
-    const entries=[
-      ...versions.map(r=>({...r,kind:svcKind[r.kind],open:'home-release'})),
+    const records=[
+      ...versions.map(r=>({...r,kind:svcKind[r.kind]||r.kind,open:'home-release'})),
       ...runs.map(r=>({...r,kind:'训练实验',open:'home-run'})),
       ...feedback.map(r=>({...r,kind:'补充任务',open:'home-feedback'}))
-    ];
-    desk=productionPanel('最近交付与实验记录','',productionList(['记录名称','类型','状态','更新时间'],productionRecent(entries).map(r=>[
-      productionName(r.title,'data-action="'+r.open+'" data-id="'+escapeHtml(r.id)+'"'),escapeHtml(r.kind),statusBadge(r.status),workTime(productionUpdated(r))
-    ]),'暂无交付、训练实验或补充任务'));
-    if (!entries.length) {
+    ].map(r=>({...r,at:productionUpdated(r),result:statusBadge(r.status),attrs:'data-action="'+r.open+'" data-id="'+escapeHtml(r.id)+'"'}));
+    spec={title:'交付与实验记录',toolsTitle:'交付与训练工具',distribution:'交付与实验分布',empty:'暂无交付、训练实验或补充任务',headers:['记录名称','业务类型','当前状态','更新时间'],records};
+    if (!workScopeRows(records,'production').length) {
       const batches=await api('/api/batches');
       const ready=batches.filter(r=>r.status==='reviewed' && r.counts?.passed>0 && !r.counts?.candidate);
-      desk=productionPanel('可编入训练集的批次',productionControl(productionRoute('batches'),'全部批次'),
-        productionList(['批次名称','通过样本','生成方式','更新时间'],productionRecent(ready).map(r=>[
-          productionName(r.title,productionAction('batch',r.id)),String(r.counts.passed)+' 条',escapeHtml(productionBatchMode(r)),workTime(productionUpdated(r))
-        ]),'暂无完成质检并通过审核的批次'));
+      spec={...spec,title:'可编入训练集的批次',distribution:'批次生成方式',empty:'暂无已完成质检并可交付的批次',headers:['批次名称','生成方式','通过样本','更新时间'],
+        records:ready.map(r=>({...r,kind:productionBatchMode(r),at:productionUpdated(r),result:String(r.counts.passed)+' 条',attrs:productionAction('batch',r.id)}))};
     }
   }
-  return sectionHead('','数据生成与蒸馏','',actions)+'<div class="pd-desk"><section class="pd-panel"><div class="pd-stage-head">'+productionStageNav()+'<div class="research-queue-link">'+workScopeMenu('production')+more+'</div>'+'</div><div class="pd-tools">'+tools+'</div></section>'+desk+'</div>';
+  if(window.workspacePage!=='generation'||window.workspaceUser?.username!==actor||productionDesk.stage!==stage)return '';
+  return sectionHead('','数据生成与蒸馏','',actions)+productionLedgerLayout(spec,tools,more);
 }
-
 function productionBatchMode(row) {
   return row.extractionId?'核准知识问答':row.mode==='teacher'?'教师候选':'规则生成';
 }
@@ -192,15 +253,30 @@ async function productionFeedback() {
 async function productionCommand(name,id) {
   switch (name) {
     case 'stage': productionDesk.stage=id;history.replaceState({...history.state,productionStage:id},'',location.href);return refresh();
-    case 'queue-filter': {
-      const panel=document.getElementById('pd-prepare-queue');
-      if(!panel)return;
-      productionDesk.prepareFilter=id;
-      panel.innerHTML=productionQueue(productionDesk.prepareRuns);
-      panel.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+    case 'queue-filter':
+    case 'queue-kind':
+    case 'queue-page':
+    case 'queue-clear': {
+      if(!productionView||!document.querySelector('[data-pd-ledger]'))return;
+      if(name==='queue-page')productionView.page+=Number(id);
+      else {
+        productionView.page=0;
+        if(name==='queue-filter')productionView.state=id;
+        if(name==='queue-kind')productionView.kind=productionView.kind===id?'':id;
+        if(name==='queue-clear')Object.assign(productionView,{query:'',kind:'',state:''});
+      }
+      productionSyncLedger();
+      if(name==='queue-page'){
+        const heading=document.querySelector('.pd-ledger h2');
+        heading.focus({preventScroll:true});
+        heading.scrollIntoView({block:'start'});
+        return;
+      }
+      const next=Array.from(document.querySelectorAll('button[data-pd]')).find(b=>
+        b.dataset.pd===name&&b.dataset.id===id&&!b.disabled);
+      (next||document.querySelector('[data-pd-search]'))?.focus({preventScroll:true});
       return;
     }
-    case 'queue-all': pipeUi.openTarget='';pipeUi.tab='';pipeUi.state=productionDesk.prepareFilter;return navigate('pipeline-work');
     case 'new-pipe':
       if(!pipeWriter()) return;
       await productionCommand('pipes');
@@ -231,6 +307,12 @@ document.addEventListener('change',e=>{
   document.getElementById('pd-batch-results').innerHTML=productionBatchRows();
 });
 document.addEventListener('input',e=>{
+  if(e.target.matches('[data-pd-search]')&&productionView){
+    productionView.query=e.target.value;
+    productionView.page=0;
+    productionSyncLedger();
+    return;
+  }
   if(!e.target.matches('[data-pd-query]'))return;
   productionDesk.query=e.target.value;productionDesk.page=0;
   document.getElementById('pd-batch-results').innerHTML=productionBatchRows();

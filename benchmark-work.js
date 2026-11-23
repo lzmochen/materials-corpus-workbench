@@ -1,5 +1,20 @@
 'use strict';
 
+function blueprintCoveragePreview(detail) {
+  const targets=detail.plan.targets, candidates=detail.candidates;
+  const rows=targets.map(target=>{
+    const matching=candidates.filter(c=>c.family===target.family && c.topic===target.topic);
+    const sources=new Set(matching.map(c=>c.resourceId));
+    const columns=[escapeHtml(target.family),escapeHtml(target.topic),target.quota+' 题'];
+    if(detail.canEdit) columns.push(matching.length+' 题',sources.size+' 份');
+    return columns;
+  });
+  const headings=['材料门类','考查专题','目标题量'];
+  if(detail.canEdit) headings.push('可选候选题','独立留出来源');
+  const action='<button type="button" class="btn" data-bprep="open" data-id="template">打开模板</button>';
+  return '<section class="rd-panel rd-coverage"><header class="rd-list-head"><h2>四门类制备模板</h2>'+action+'</header>'+workTable(headings,rows)+'</section>';
+}
+
 const benchmarkPreparation = (() => {
   const base = '/api/benchmark-work';
   const status = {design:'设计中',draft:'已制备草稿',reviewing:'专家评审中',published:'已发布'};
@@ -96,11 +111,13 @@ const benchmarkPreparation = (() => {
     const seq=++loadSeq, identity=window.workspaceUser.username;
     const [inventory,resources]=await Promise.all([api(base),api('/api/resources')]);
     if(seq!==loadSeq || identity!==window.workspaceUser.username) return '';
-    meta={...inventory,papers:workSourceChoices(resources,'benchmarks').filter(r=>r.split==='holdout' && r.researchCase)};
+    meta={...inventory,papers:workSourceChoices(resources,'benchmarks').filter(r=>catAccessible(r) && r.split==='holdout' && r.researchCase)};
     const resolved = active==='template' ? 'template' : inventory.blueprints.find(plan=>plan.id===active)?.id;
     if(!resolved) {
       active='';page=null;
-      return library();
+      const template=await api(base+'/template');
+      if(seq!==loadSeq || identity!==window.workspaceUser.username) return '';
+      return library(template);
     }
     const loaded=await api(base+'/'+resolved);
     if(seq!==loadSeq || identity!==window.workspaceUser.username) return '';
@@ -110,11 +127,9 @@ const benchmarkPreparation = (() => {
     for(const id of selection) if(!page.candidates.some(c=>c.id===id)) selection.delete(id);
     return sectionHead('','基准设计与制备','')+synch(panel());
   }
-  function library() {
-    const plans=meta.blueprints, sample=meta.default;
-    const families=[...new Set(sample.targets.map(t=>t.family))];
-    const template='<section class="rd-template"><div class="rd-template-icon">'+workIcon('steps')+'</div><div><h2>四门类制备模板</h2><p>'+h(families.join(' · '))+'</p></div>'+
-      button('打开模板','open','template')+'</section>';
+  function library(detail) {
+    const plans=meta.blueprints;
+    const template=blueprintCoveragePreview(detail);
     const rows=plans.map(p=>{
       const name='<button type="button" class="rd-name" data-bprep="open" data-id="'+h(p.id)+'">'+h(p.title)+'</button>';
       const tone=p.status==='published'?'green':p.status==='reviewing'?'amber':'neutral';
@@ -123,10 +138,9 @@ const benchmarkPreparation = (() => {
     });
     const list=rows.length?reviewDirectory('blueprints',['蓝图名称','目标题量','已制备','编制人','状态'],rows,'搜索蓝图名称或编号'):
       '<div class="rd-empty"><strong>尚未保存蓝图</strong><p>'+(writer()?'从四门类模板开始，或新建蓝图设置考查范围和题量。':'已保存的组卷方案会显示在这里。')+'</p></div>';
-    const papers=meta.papers.length?'<section class="rd-panel">'+reviewListHeader('专题留出文献',meta.papers.length)+
-      workTable(['原文摘录','考查专题'],meta.papers.map(r=>[workBtn(r.title,'resource-open',r.id),h(r.topic||'待归类')]))+'</section>':'';
-    return sectionHead('','基准设计与制备','',writer()?button('新建蓝图','new','','primary'):'')+papers+template+
-      '<section class="rd-panel">'+reviewListHeader('组卷蓝图库',plans.length)+list+'</section>';
+    const papers=reviewSourceShelf('专题留出文献',meta.papers);
+    const library=template+'<section class="rd-panel">'+reviewListHeader('组卷蓝图库',plans.length)+list+'</section>';
+    return sectionHead('','基准设计与制备','',writer()?button('新建蓝图','new','','primary'):'')+reviewWorkspace(library,papers);
   }
   function updateSelection() {
     document.querySelectorAll('[data-bprep-check]').forEach(n=>{n.checked=selection.has(n.dataset.bprepCheck);});
@@ -235,7 +249,8 @@ const benchmarkPreparation = (() => {
     try {
       if(action==='library' || action==='open'){
         active=action==='open'?el.dataset.id:'';
-        await refresh();
+        if(window.workspacePage==='benchmark-work')await refresh();
+        else await navigate('benchmark-work');
         if(action==='open')wb('[data-bprep="library"]')?.focus({preventScroll:true});
         return;
       }

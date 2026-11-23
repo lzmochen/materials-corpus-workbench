@@ -111,7 +111,7 @@ async function catSetup(){
   if(!rows.length)return;
   const templates=(await api('/api/luoshu/templates')).filter(t=>t.id!=='custom');
   if(!templates.length)throw new Error('暂无可用模板');
-  openModal('批量创建抽取任务',`<div class="stack"><label class="field">抽取模板<select id="cat-template">${workSelect(templates.map(t=>[t.id,t.name]),'materials')}</select></label><div class="cat-batch-list">${rows.map(r=>`<div><strong>${escapeHtml(r.title)}</strong><small>v${catActive(r).number}</small></div>`).join('')}</div><div class="actions">${catButton('提交 '+rows.length+' 份资源','submit','','cat-batch')}</div></div>`);
+  openModal('批量创建抽取任务',`<div class="stack"><label class="field">抽取模板<select id="cat-template">${workSelect(templates.map(t=>[t.id,t.name]),'source')}</select></label><div class="cat-batch-list">${rows.map(r=>`<div><strong>${escapeHtml(r.title)}</strong><small>v${catActive(r).number}</small></div>`).join('')}</div><div class="actions">${catButton('提交 '+rows.length+' 份资源','submit','','cat-batch')}</div></div>`);
 }
 function catResults(){
   if(!catBatch)return;
