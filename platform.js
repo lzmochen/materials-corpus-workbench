@@ -136,6 +136,50 @@ let utilityView=null,utilityVersion=0;
 function utilityButton(action,id,title,meta,icon='book'){
   return `<button type="button" class="p-record" data-action="${action}" data-id="${escapeHtml(id)}"><span class="p-record-icon">${platIcon(icon)}</span><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>${platIcon('arrow')}</button>`;
 }
+function homeModuleActions(moduleKey,data,tasks=collectWorkItems(data,'home')) {
+  const manager=workCan('operator','lead','admin');
+  const button=(label,attrs)=>'<button type="button" '+attrs+'>'+escapeHtml(label)+'</button>';
+  const firstTask=(stage,action)=>tasks.find(item=>item.stage===stage && (!action || item.action===action));
+  const taskLink=(item,label)=>workBtn(label||item.label,item.action,item.target,'small');
+  if(moduleKey==='resources'){
+    if(manager)return workBtn('登记原文','resource-create','','small')+button('批量采集','data-intake-action="open"');
+    return button('检索原文证据','data-catalog-evidence="open"')+workBtn('查看专题覆盖','home-coverage','','small');
+  }
+  if(moduleKey==='generation'){
+    if(manager)return workBtn('抽取原文字段','work-extraction-create','','small')+button('新建制备任务','data-pd="new-pipe"');
+    const check=firstTask('知识核查');
+    return (check?taskLink(check,'核查抽取条目'):workBtn('查看抽取记录','nav','extraction','small'))+
+      button('查看样本质量','data-pd="quality" data-id="samples"');
+  }
+  if(moduleKey==='annotations'){
+    const ongoing=firstTask('标注复核')||firstTask('思维链标注','home-annotation');
+    const start=firstTask('思维链标注','home-new-annotation');
+    const records=workScopeRows(data.annotations,'home');
+    const latest=records.filter(record=>!ongoing||record.id!==ongoing.target)
+      .sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''))[0];
+    const links=[];
+    if(ongoing)links.push(taskLink(ongoing));
+    if(start)links.push(taskLink(start,'标注已通过样本'));
+    if(links.length<2 && latest)links.push(workBtn('查看最近工单','home-annotation',latest.id,'small'));
+    if(!links.length)links.push(button('查看样本质量','data-pd="quality" data-id="samples"'));
+    return links.join('');
+  }
+  const links=[];
+  // The review desk can open the specific question that still needs a score.
+  const item=firstTask('基准评审');
+  if(item){
+    const record=data.benchmarks.find(b=>b.id===item.target);
+    const question=record?.items?.find(q=>item.label==='处理仲裁'?q.reviewState==='conflict':item.label==='独立评分'&&q.reviewState==='pending'&&!q.hasReviewed);
+    links.push(button(item.label,'data-action="home-benchmark" data-id="'+escapeHtml(item.target)+'"'+(question?' data-question-id="'+escapeHtml(question.id)+'"':'')));
+  }
+  links.push(button(manager?'设计评测蓝图':'查看制备模板','data-bprep="open" data-id="template"'));
+  if(!item && manager)links.push(button('新建评测基准','data-action="ex-benchmark-new"'));
+  if(!item && !manager){
+    const published=workScopeRows(data.benchmarks,'home').find(b=>b.status==='published');
+    if(published)links.push(workBtn('查看冻结基准','home-benchmark',published.id,'small'));
+  }
+  return links.join('');
+}
 function platformSearchRows(q) {
   const query=q.toLocaleLowerCase().trim(), data=utilityView;
   const result=[];

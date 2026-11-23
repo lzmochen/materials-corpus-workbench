@@ -411,6 +411,10 @@ function workWatchJob(jobId) {
 async function handleWorkAction(action,el) {
   const id=el.dataset.id;
   switch(action) {
+    case 'home-coverage':
+      await catalogOpenFamily('');
+      if(window.workspacePage==='resources' && wb('.cat-desk'))guideCoverage();
+      return;
     case 'home-batch': return openProductionBatch(id);
     case 'home-extraction': return openLuoshuTask(id);
     case 'home-feedback': return openFeedbackRecord(id);
@@ -425,7 +429,9 @@ async function handleWorkAction(action,el) {
       return openNewSampleAnnotation(id);
     }
     case 'resource-case-trail': return openCaseTrail(...id.split('|'));
-    case 'home-benchmark': return openBenchmarkRecord(id);
+    case 'home-benchmark':
+      if(el.dataset.questionId)exItemViews.set(id,el.dataset.questionId);
+      return openBenchmarkRecord(id);
     case 'home-release': return openReleaseRecord(id);
     case 'home-run': return openRunRecord(id);
     case 'platform-search': return platformUtility('search');

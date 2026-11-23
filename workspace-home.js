@@ -2,17 +2,45 @@
 
 const homeFamilyColors = ['#005b94','#4b8db4','#77aac8','#a8c2d3','#61778a','#d5dfe6'];
 let homeData = null;
+let homeTasks = [];
 let homeFilter = {user:'', tab:'pending', stage:''};
 
-function homeAssetLinks(data) {
-  const counts = [data.resources,data.samples,data.annotations,data.benchmarks].map(rows=>rows.filter(r=>r.catalogTier!=='archived-practice').length);
-  const units = ['份资源','条问答','份工单','套基准'];
-  const links = ['打开目录','进入制备','查看工单','查看基准'];
-  return platformModules.map((module, index) => `
-    <button class="home-asset home-asset-${index}" type="button" data-action="nav" data-id="${module.key}" aria-label="${module.title}，${counts[index]}${units[index]}">
-      <span class="asset-top"><span class="asset-icon">${platIcon(module.icon)}</span><strong>${module.label}</strong></span>
-      <span class="asset-bottom"><span><b>${counts[index]}</b> ${units[index]}</span><span class="asset-go">${links[index]}</span></span>
-    </button>`).join('');
+function homeStageCounts(key,data) {
+  const current=rows=>rows.filter(r=>r.catalogTier!=='archived-practice');
+  const statusCount=(rows,status)=>current(rows).filter(r=>r.status===status).length;
+  switch(key){
+    case 'resources': return [['待解析',statusCount(data.resources,'registered'),'份'],['待核准',statusCount(data.resources,'parsed'),'份']];
+    case 'generation': return [['待核查字段',current(data.extractions).reduce((n,r)=>n+(r.counts?.pending||0),0),'项'],['待质检批次',statusCount(data.batches,'generated'),'个']];
+    case 'annotations': return [['待提交',statusCount(data.annotations,'draft')+statusCount(data.annotations,'returned'),'单'],['待复核',statusCount(data.annotations,'submitted'),'单']];
+    case 'benchmarks': return workCan('annotator') ? [['评审中',statusCount(data.benchmarks,'reviewing'),'套'],['已冻结',statusCount(data.benchmarks,'published'),'套']] :
+      [['已核准留出资料',current(data.resources).filter(r=>r.split==='holdout'&&r.status==='approved').length,'份'],['评审中',statusCount(data.benchmarks,'reviewing'),'套']];
+  }
+}
+function homeBusinessGroup(title, modules, data, tasks) {
+  const cards=modules.map(module=>
+    `<article class="home-module">
+      <h3><button type="button" class="home-asset" data-action="nav" data-id="${module.key}" aria-label="${escapeHtml(module.title)}">
+        <span class="asset-icon">${platIcon(module.icon)}</span><span>${escapeHtml(module.label)}</span><span class="home-module-arrow" aria-hidden="true">${platIcon('arrow')}</span>
+      </button></h3>
+      <div class="home-module-load">${homeStageCounts(module.key,data).map(([label,value,unit])=>'<span>'+label+' <b>'+value+'</b> '+unit+'</span>').join('')}</div>
+      <div class="home-module-actions">${homeModuleActions(module.key,data,tasks)}</div>
+    </article>`).join('');
+  return '<section class="home-panel home-business"><header class="home-panel-head"><h2>'+escapeHtml(title)+'</h2></header><div class="home-module-grid">'+cards+'</div></section>';
+}
+
+function homeQuantities(data) {
+  const current=row=>row.catalogTier!=='archived-practice';
+  const samples=data.samples.filter(current);
+  const checkedFields=data.extractions.filter(current).reduce((sum,task)=>
+    sum+(task.counts?.approved||0)+(task.counts?.rejected||0),0);
+  const metrics=[
+    ['入库资源','份',data.resources.filter(current).length],['已核查字段','项',checkedFields],
+    ['问答样本','条',samples.length],['质检通过样本','条',samples.filter(sample=>sample.status==='passed').length],
+    ['标注工单','份',data.annotations.filter(current).length],['评测基准','套',data.benchmarks.filter(current).length]
+  ];
+  const items=metrics.map(([label,unit,count])=>
+    '<div><dt>'+label+'</dt><dd><b>'+count+'</b><span>'+unit+'</span></dd></div>').join('');
+  return '<section class="home-panel home-quantities"><header class="home-panel-head"><h2>数量统计</h2></header><dl class="home-metrics">'+items+'</dl></section>';
 }
 
 function homeDistribution(resources) {
@@ -43,7 +71,7 @@ function homeQueueContent(data) {
     const rows = recent.map(row => `<tr><td class="home-entry"><button type="button" title="${escapeHtml(row.title)}" data-action="resource-open" data-id="${escapeHtml(row.id)}">${escapeHtml(row.title)}</button></td><td>${escapeHtml(guideFamily(row))}</td><td>${statusBadge(row.status)}</td></tr>`).join('');
     return rows ? '<div class="home-table-scroll"><table class="home-table"><thead><tr><th>资源名称</th><th>材料门类</th><th>当前状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>' : '<p class="home-empty">暂无可查看的资源</p>';
   }
-  const items=collectWorkItems(data,'home');
+  const items=homeTasks;
   const stages=[...new Set(items.map(item=>item.stage))];
   if (!stages.includes(homeFilter.stage)) homeFilter.stage='';
   const filtered=items.filter(item=>!homeFilter.stage || item.stage===homeFilter.stage);
@@ -66,10 +94,24 @@ async function renderWorkspaceHome() {
   if (window.workspacePage !== 'home' || window.workspaceUser.username !== user) return '';
   if (homeFilter.user !== user) homeFilter = {user,tab:'pending',stage:''};
   homeData=data;
+  homeTasks=collectWorkItems(data,'home');
   const date=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long',timeZone:'Asia/Shanghai'}).format(new Date());
   return `<header class="home-title"><h1>工作台</h1><time>${platIcon('calendar')}${escapeHtml(date)}</time></header>
-    <section class="home-panel home-business"><header class="home-panel-head"><h2>业务办理</h2></header><div class="home-assets">${homeAssetLinks(data)}</div></section>
-    <div class="home-lower">${homeListPanel(data)}${homeDistribution(data.resources.filter(r=>r.catalogTier!=='archived-practice'))}</div>`;
+    <div class="home-desks">
+      <div class="home-practice" aria-label="业务办理">
+        ${homeBusinessGroup('资源与语料制备',platformModules.slice(0,2),data,homeTasks)}
+        ${homeBusinessGroup('标注与评测',platformModules.slice(2),data,homeTasks)}
+        ${homeListPanel(data)}
+        <section class="home-panel home-case-links"><header class="home-panel-head"><h2>科研案例与全流程</h2></header>
+          <nav aria-label="科研案例与全流程">${[['crystal','碳化硅晶体生长'],['research','双相钢退火'],['workflow','全流程办理']].map(([route,label])=>
+            '<button type="button" data-action="nav" data-id="'+route+'">'+label+platIcon('arrow')+'</button>').join('')}</nav>
+        </section>
+      </div>
+      <aside class="home-overview" aria-label="统计概览">
+        ${homeQuantities(data)}
+        ${homeDistribution(data.resources.filter(r=>r.catalogTier!=='archived-practice'))}
+      </aside>
+    </div>`;
 }
 
 document.addEventListener('click',event=>{
