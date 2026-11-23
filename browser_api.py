@@ -22,22 +22,18 @@ import luoshu
 import luoshu_config
 import production
 import service
-from core import ApiError, Context, connect, ensure_document_tables, fail, now
+from core import ApiError, Context, MEETING_MEMBERS, connect, ensure_document_tables, fail, now
 import browser_media
 
 DATABASE = '/visitor.sqlite3'
-ROLES = {
-    'operator': ('数据管理员', 'operator'), 'annotator': ('语料标注员', 'annotator'),
-    'expert-a': ('评审专家 A', 'expert'), 'expert-b': ('评审专家 B', 'expert'),
-    'lead': ('评测负责人', 'lead'),
-}
+MEMBERS = {name: (display, role) for name, display, role in MEETING_MEMBERS}
 MODULES = (research_case, quality_work, pipeline_work, benchmark_work, corpus_topics, guide_standards, guide_eval, guide_contrast, distillation, lineage,
            production, expert, service, luoshu_config, luoshu)
 
 
-def user(role):
-    label, kind = ROLES[role]
-    return {'username': role, 'display': label, 'role': kind, 'meeting': True}
+def user(username):
+    display, role = MEMBERS[username]
+    return {'username': username, 'display': display, 'role': role, 'meeting': True}
 
 
 def setup_database():
@@ -45,9 +41,10 @@ def setup_database():
         db.execute('PRAGMA journal_mode = DELETE')
         db.execute('BEGIN IMMEDIATE')
         ensure_document_tables(db)
-        for name, (display, role) in ROLES.items():
-            db.execute('INSERT OR IGNORE INTO users(username, display, role, salt, password_hash) VALUES(?,?,?,?,?)',
-                       (name, display, role, '', ''))
+        db.executemany('''INSERT INTO users(username, display, role, salt, password_hash)
+            VALUES(?,?,?,'','') ON CONFLICT(username) DO UPDATE
+            SET display=excluded.display, role=excluded.role
+            WHERE users.display!=excluded.display OR users.role!=excluded.role''', MEETING_MEMBERS)
         db.commit()
 
 
@@ -163,15 +160,18 @@ async def handle(ctx, method, path, data):
         return {'status': 'ok'}
     if path == '/api/meeting/role' and method == 'POST':
         desired = data.get('username')
-        if not isinstance(desired, str) or desired not in ROLES:
-            fail(400, '请选择有效岗位')
+        if not isinstance(desired, str) or desired not in MEMBERS:
+            fail(400, '请选择有效经办人')
         return user(desired)
+    if path == '/api/users' and method == 'GET':
+        ctx.allow('operator')
+        return [user(name) for name in MEMBERS]
     if path == '/api/jobs' and method == 'GET':
         return [{k:v for k,v in job.items() if k not in ('payload','result')} for job in ctx.all('jobs')[:100]]
     if re.fullmatch('/api/jobs/[A-Z0-9-]+', path) and method == 'GET':
         return {k:v for k,v in ctx.require('jobs', path.rsplit('/',1)[-1]).items() if k not in ('payload','result')}
     if path == '/api/audit' and method == 'GET':
-        ctx.allow('lead')
+        ctx.allow('operator')
         return [dict(row) for row in ctx.db.execute('SELECT * FROM audit_log ORDER BY seq DESC LIMIT 100')]
     if path == '/api/luoshu/configs/import-preview' and method == 'POST':
         import yaml
@@ -199,9 +199,11 @@ async def handle(ctx, method, path, data):
 
 async def execute_request(method, path, role, body):
     with closing(connect(DATABASE)) as db:
-        ctx = Context(db, user(role if role in ROLES else 'operator'))
         db.execute('BEGIN IMMEDIATE')
         try:
+            if role not in MEMBERS:
+                fail(400, '经办人无效，请重新选择角色')
+            ctx = Context(db, user(role))
             research_case.seed(db)
             if method == 'QUEUE':
                 await drain_job(Context(db, {'username':'system','role':'admin','display':'任务执行器'}))

@@ -13,8 +13,8 @@
   };
   const decisionTypes = ['采用原始记录','采用对照记录','保留差异待复测','待补证','经复核允许双方采用'];
   const h = value => escapeHtml(value);
-  const canRun = () => workCan('operator','lead','admin');
-  const canReview = () => workCan('operator','lead','expert','admin');
+  const canRun = () => workCan('operator');
+  const canReview = () => workCan('operator','expert');
   let tab = 'samples', batchId = '', runId = '', runFilter = '', sampleFilter = '';
   let currentIndex = null, activeRun = null;
   function btn(label, action, id='', tone='') {
@@ -103,7 +103,7 @@
   function showRow(key) {
     const run=activeRun, row=run.rows.find(r=>r.key===key);
     const history=run.decisions[key] || [];
-    const eligibleToRelease=row.state==='conflict' && workCan('expert','lead','admin');
+    const eligibleToRelease=row.state==='conflict' && workCan('expert');
     const choices=decisionTypes.filter(t=>(t!=='经复核允许双方采用' || eligibleToRelease) && !(t==='采用原始记录' && !row.left.length) && !(t==='采用对照记录' && !row.right.length));
     const form=canReview()?`<form class="stack" data-qw-form="decision" data-key="${h(key)}" data-revision="${history.length}" data-run="${h(run.id)}">
       <div class="qw-heading"><h3>登记处置</h3></div>${sel('处置意见','decision',choices.map(v=>[v,v]),'待补证')}

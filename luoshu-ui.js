@@ -9,8 +9,8 @@ const lsTabs = [['tasks','抽取任务'],['review','原文核查'],['knowledge',
 const lsStatuses = {pending:['待核查','amber'],reviewed:['已核查','green'],generated:['已生成语料','blue'],approved:['已通过','green'],rejected:['已剔除','red']};
 const lsApi = '/api/luoshu';
 const lsBase = id => lsApi+'/extractions/'+encodeURIComponent(id);
-const lsWrite = () => workCan('operator','lead','admin');
-const lsReview = () => workCan('operator','expert','lead','admin');
+const lsWrite = () => workCan('operator');
+const lsReview = () => workCan('operator','expert');
 const lsEsc = value => escapeHtml(value ?? '');
 
 function lsBadge(status) {

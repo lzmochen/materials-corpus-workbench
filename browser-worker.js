@@ -137,7 +137,7 @@ async function boot() {
   const base = new URL('/materials-corpus-workbench/runtime/', self.location).href;
   importScripts(base+'pyodide.js');
   const results = await Promise.all([
-    loadPyodide({indexURL:base}), asset('/materials-corpus-workbench/business.zip?v=50179e2bda67'), asset('/materials-corpus-workbench/browser_api.py','text'), openStorage()
+    loadPyodide({indexURL:base}), asset('/materials-corpus-workbench/business.zip?v=247e0029a9f7'), asset('/materials-corpus-workbench/browser_api.py?v=5ad50cb90710','text'), openStorage()
   ]);
   runtime=results[0];
   storage=results[3];

@@ -209,13 +209,13 @@ async function openProductionBatch(id) {
 }
 function productionAnnotationAction(sample,annotation) {
   if(sample.status!=='passed') return sample.status==='rejected'?'已剔除':'待质检通过';
-  if(!annotation) return workCan('operator','annotator','lead','admin')
+  if(!annotation) return workCan('annotator')
     ? workBtn('开始标注','home-new-annotation',sample.id,'small') : '待建立标注工单';
-  const owner=annotation.author===window.workspaceUser.username;
+  const owner=annotation.canEdit;
   let label='查看标注工单';
   if(owner && annotation.status==='draft') label='继续标注';
   if(owner && annotation.status==='returned') label='修订标注';
-  if(!owner && annotation.status==='submitted' && workCan('expert','lead','admin')) label='复核标注';
+  if(!owner && annotation.status==='submitted' && workCan('expert')) label='复核标注';
   if(annotation.status==='approved') label='查看复核结果';
   return workBtn(label,'home-annotation',annotation.id,'small');
 }
@@ -236,7 +236,7 @@ async function renderProductionBatchRecord() {
   const extra=(batch.extractionId?workBtn('查看知识核查记录','home-extraction',batch.extractionId,'small'):'')
     +(batch.jobId?workBtn('查看后台任务','nav','jobs','small'):'');
   const actions=(canCheck?workBtn('执行规则质检','batch-quality',id,'primary'):'')+(batch.status==='reviewed'?workBtn('查看质量评价','batch-quality-details',id):'')
-    +(passed && workCan('operator','annotator','lead','admin')?workBtn('导出通过样本','batch-export',id):'');
+    +(passed && workCan('operator','annotator')?workBtn('导出通过样本','batch-export',id):'');
   const source=productionName((r?.title||batch.resourceId)+(v?' · V'+v.number:''),'data-action="resource-open" data-id="'+escapeHtml(batch.resourceId+'|'+batch.versionId)+'"');
   const meta='<div class="pd-record-meta"><span>来源原文　'+source+'</span><span>'+escapeHtml(productionBatchMode(batch))+'</span>'+statusBadge(batch.status)+'</div>';
   const visible=rows.filter(s=>!workSampleStatus || s.status===workSampleStatus);

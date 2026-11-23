@@ -32,7 +32,7 @@ function researchPanel(r,part) {
   let controls='';
   if(part==='training') controls=researchAction('source','核对已入库的文献摘录')+(r.batchId?researchAction('batch','检查问答与质检记录'):'');
   if(part==='context') controls=r.contextResourceId?researchAction('context','核对对照文献摘录'):researchArticle('https://huasheng.ustb.edu.cn/szdw/jsml/a6fb731daa664806844909d9708419dd.htm','郭中楠教授研究方向');
-  if(part==='evaluation') controls=researchAction('holdout','核对留出文献摘录')+(r.benchmarkId?researchAction('benchmark','打开关联评测',true):r.annotationStatus==='approved'?researchAction('handoff','从已复核标注制备评测',true):researchAction('annotation','查看标注办理状态'));
+  if(part==='evaluation') controls=researchAction('holdout','核对留出文献摘录')+(r.benchmarkId?researchAction('benchmark','打开关联评测',true):r.annotationStatus==='approved'?researchAction('handoff',workCan('expert')?'从已复核标注制备评测':'查看评测交接',workCan('expert')):researchAction('annotation','查看标注办理状态'));
   const content=part==='training'?`<table class="rs-evidence"><thead><tr><th>证据类型</th><th>文献记录</th><th>出处</th></tr></thead><tbody>${paper.rows.map(row=>`<tr><th scope="row">${row[0]}</th><td>${row[1]}</td><td>${row[2]}</td></tr>`).join('')}</tbody></table>`:`<dl class="rs-fields">${paper.rows.map(([term,detail])=>`<div><dt>${term}</dt><dd>${detail}</dd></div>`).join('')}</dl>`;
   return `<div class="rs-paper"><div><h3>${paper.title}</h3><p>${paper.credit}</p></div>${researchArticle(paper.url,'查阅论文原文')}</div>${content}<div class="rs-actions">${controls}</div>`;
 }

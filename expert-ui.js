@@ -18,7 +18,7 @@ const exPath = value => encodeURIComponent(value);
 const exText = value => escapeHtml(value ?? '');
 const exChecked = checked => checked ? ' checked' : '';
 const exSelected = selected => selected ? ' selected' : '';
-function exAllowed(...roles) { return roles.includes(window.workspaceUser?.role); }
+function exAllowed(...roles) { return workCan(...roles); }
 function exOwn(username) { return username === window.workspaceUser?.username; }
 function exBadge(status) {
   const [label, tone] = exStatus[status] || [status || '待标注', 'neutral'];
@@ -116,7 +116,7 @@ function exMaterialCriteria(annotation, editable) {
   return `<details class="ex-material-criteria"${Object.keys(criteria).length ? ' open' : ''}><summary>比较条件与适用范围</summary>
     <div class="ex-criteria-grid">${fields}</div></details>`;
 }
-const exHandoffRoles = ['operator','annotator','expert-a','expert-b','lead'];
+const exHandoffRoles = ['operator','annotator',...Object.keys(meetingExperts)];
 
 function exHandoffRow(message, receiver, section, id, itemId = '') {
   const canSwitch = window.workspaceUser?.meeting && exHandoffRoles.includes(receiver) && !exOwn(receiver);
@@ -128,7 +128,7 @@ function exHandoffRow(message, receiver, section, id, itemId = '') {
 function exAnnotationHandoff(annotation, canEdit, canReview) {
   if (!canEdit && ['draft','returned'].includes(annotation.status)) {
     const task = annotation.status === 'returned' ? '按复核意见修订标注。' : '补全推理步骤并提交复核。';
-    return exHandoffRow('待' + reviewOwner(annotation.author) + task,annotation.author,'annotations',annotation.id);
+    return exHandoffRow('待标注员' + task,'annotator','annotations',annotation.id);
   }
   if (!canReview && annotation.status === 'submitted') {
     const reviewer = annotation.author === 'expert-a' ? 'expert-b' : 'expert-a';
@@ -138,8 +138,8 @@ function exAnnotationHandoff(annotation, canEdit, canReview) {
 }
 
 function exAnnotationDetail(annotation, sample) {
-  const canEdit = exOwn(annotation.author) && ['draft','returned'].includes(annotation.status);
-  const canReview = exAllowed('expert','lead','admin') && !exOwn(annotation.author) && annotation.status === 'submitted';
+  const canEdit = exAllowed('annotator') && annotation.canEdit;
+  const canReview = exAllowed('expert') && !exOwn(annotation.author) && annotation.status === 'submitted';
   const heading = `<div class="ex-facts"><span><small>工单编号</small><strong class="ex-mono">${exText(annotation.id)}</strong></span><span><small>样本</small><strong class="ex-mono">${exText(annotation.sampleId)}</strong></span><span><small>证据版本</small><strong class="ex-mono">${exText(annotation.versionId)}</strong></span><span><small>标注人</small><strong>${exText(annotation.author)}</strong></span></div>`;
   const question = sample ? `<div class="ex-context"><h3>训练样本${annotation.topic?' · '+exText(annotation.topic):''}</h3><strong>${exText(sample.question)}</strong><p>${exText(sample.answer)}</p>${sample.evidence?.length ? `<details class="ex-history"><summary>查看样本的原始证据</summary><ul class="ex-evidence-list">${sample.evidence.map(exEvidenceCard).join('')}</ul></details>` : ''}</div>` : '';
   const recorded = annotation.steps || [];
@@ -148,7 +148,7 @@ function exAnnotationDetail(annotation, sample) {
     ? [...exKinds.map(kind => recorded.find(step=>step.kind===kind) || {kind,text:'',blockIds:[]}), ...recorded.filter(step=>!exKinds.includes(step.kind))]
     : recorded;
   const active = Math.min(exEditorViews.get(annotation.id) || 0, steps.length - 1);
-  const editable = `<form class="stack ex-form" data-form="ex-annotation-edit" data-id="${exText(annotation.id)}" data-owner="${exText(annotation.author)}">
+  const editable = `<form class="stack ex-form" data-form="ex-annotation-edit" data-id="${exText(annotation.id)}" data-owner="${exText(window.workspaceUser.username)}">
     <div class="ex-editor-bar"><h3>步骤编辑器</h3><span data-ex-complete aria-live="polite">${steps.filter(s => s.text?.trim() && s.blockIds?.length).length} / ${steps.length} 步完整</span><small data-ex-save-state>已载入草稿</small></div>
     <div class="ex-step-nav" aria-label="选择标注步骤">${exStepNavigation(steps,active)}</div>
     <div class="ex-step-grid">${steps.map((step,index) => exStepDraft(step,index,annotation.availableBlocks || [],active)).join('')}</div>
@@ -178,7 +178,7 @@ async function openAnnotationBenchmarkHandoff(annotationId, manual = false) {
   const s = h.source;
   const summary = `<div class="ex-context"><h3>${exText(s.resourceTitle)}</h3><p>${exText(s.question)}</p><span>${exText([s.family,s.topic].filter(Boolean).join(' · '))}　${exText(s.annotationId)}</span></div>`;
   if (h.benchmarkId) {
-    if (exAllowed('operator','expert','lead','admin')) {
+    if (exAllowed('operator','expert')) {
       exItemViews.set(h.benchmarkId,h.itemId);
       closeModal();
       return openBenchmarkRecord(h.benchmarkId);
@@ -187,8 +187,8 @@ async function openAnnotationBenchmarkHandoff(annotationId, manual = false) {
     return;
   }
   if (!h.canPrepare) {
-    const switcher = window.workspaceUser?.meeting ? exButton('切换至数据管理员办理','handoff-operator',annotationId,{primary:true}) : '';
-    openModal('评测交接',summary+exEmpty('待编制独立留出题','数据管理员或评测负责人可接收该标注工单。',switcher));
+    const switcher = window.workspaceUser?.meeting ? exButton('交由评审专家办理','handoff-expert',annotationId,{primary:true}) : '';
+    openModal('评测交接',summary+exEmpty('待编制独立留出题','由评审专家选择独立留出资料、编制评测题。',switcher));
     return;
   }
   if (!h.materials.length) {
@@ -316,7 +316,7 @@ const reviewListState = {
   benchmarks:{page:1, query:''},
   blueprints:{page:1, query:''}
 };
-const reviewOwnerNames = {operator:'数据管理员',annotator:'语料标注员','expert-a':'评审专家 A','expert-b':'评审专家 B',lead:'评测负责人',admin:'管理员'};
+const reviewOwnerNames = {...workRoles,admin:workRoles.operator,...meetingExperts};
 function reviewOwner(username) { return reviewOwnerNames[username] || username || '—'; }
 
 function reviewListHeader(title, count, actions='') {
@@ -409,7 +409,7 @@ async function renderAnnotations() {
     }
     if (revision!==workView) return '';
   }
-  const canCreate=exAllowed('annotator','operator','lead','admin');
+  const canCreate=exAllowed('annotator');
   const scope=sourceQueueView('annotations',resources,selected || requestedSample);
   if (selected || requestedSample) {
     exState.annotation=detail?.id || '';exState.sample=requestedSample?.id || '';
@@ -492,24 +492,19 @@ function exDisagreement(item) {
 }
 function exItemHandoff(benchmark, item, canReview, canArbitrate) {
   if (benchmark.status !== 'reviewing') return '';
-  if (item.reviewState === 'conflict' && !canArbitrate) {
-    return exHandoffRow('两份评分存在分歧，待未参与制题的评测负责人或管理员仲裁。',
-      benchmark.owner === 'lead' ? '' : 'lead','benchmarks',benchmark.id,item.id);
-  }
-  if (item.reviewState !== 'pending' || canReview) return '';
-  let reviewer = '';
-  if (!item.reviewCount) reviewer = benchmark.owner === 'expert-a' ? 'expert-b' : 'expert-a';
-  if (item.hasReviewed && exOwn('expert-a')) reviewer = 'expert-b';
-  if (item.hasReviewed && exOwn('expert-b')) reviewer = 'expert-a';
-  return exHandoffRow(item.reviewCount ? '待另一名专家独立评分。' : '本题已送审，待专家独立评分。',
-    reviewer === benchmark.owner ? '' : reviewer,'benchmarks',benchmark.id,item.id);
+  let message = '';
+  if (item.reviewState==='conflict' && !canArbitrate) message='由未参与本题编制或评分的专家裁定。';
+  if (item.reviewState==='pending' && !canReview) message=item.hasReviewed ? '本人已提交评分，等待另一名专家独立评分。' : '由未参与命题的专家独立评分。';
+  if (!message) return '';
+  if (!workCan('expert')) return exHandoffRow(message,'expert-a','benchmarks',benchmark.id,item.id);
+  return '<p class="ex-caption">'+exText(message)+'</p>';
 }
 
 function exBenchmarkItem(benchmark, item) {
-  const canEdit = item.id !== benchmark.handoff?.itemId && benchmark.status === 'draft' && (exOwn(benchmark.owner) || exAllowed('lead','admin'));
-  const canReview = benchmark.status === 'reviewing' && exAllowed('expert') && !item.hasReviewed && !exOwn(benchmark.owner) && item.reviewState === 'pending';
-  const canArbitrate = benchmark.status === 'reviewing' && exAllowed('lead','admin') && !exOwn(benchmark.owner) && item.reviewState === 'conflict';
-  const canFeedback = benchmark.status === 'published' && exAllowed('expert','lead','admin');
+  const canEdit = item.id !== benchmark.handoff?.itemId && benchmark.status === 'draft' && benchmark.canEdit;
+  const canReview = item.canReview;
+  const canArbitrate = item.canArbitrate;
+  const canFeedback = benchmark.status === 'published' && exAllowed('expert');
   const editType = canArbitrate ? 'arbitrate' : 'review';
   const scores = item.candidates?.length || item.rubric?.length ? exScoreGrid(item, canReview || canArbitrate) : '';
   const context = item.reviewState === 'pending' && benchmark.status === 'reviewing'
@@ -525,11 +520,11 @@ function exBenchmarkItem(benchmark, item) {
 }
 
 function exCanProgressFeedback(ticket) {
-  return ['open','in_progress'].includes(ticket.status) && exAllowed('operator','lead','admin') &&
-    (!ticket.assignee || exOwn(ticket.assignee) || exAllowed('lead','admin'));
+  return ['open','in_progress'].includes(ticket.status) && (exAllowed('expert') ||
+    (exAllowed('operator') && (!ticket.assignee || exOwn(ticket.assignee))));
 }
 function exRegressionButton(entry) {
-  if (!exAllowed('operator','lead','admin','expert')) return '';
+  if (!exAllowed('operator','expert')) return '';
   return exButton('同题回归复验','feedback-regression',entry.id);
 }
 function exFeedbackPanel(feedback, benchmark) {
@@ -543,15 +538,15 @@ function exFeedbackPanel(feedback, benchmark) {
 function exBenchmarkDetail(benchmark, feedback) {
   const draft = benchmark.status === 'draft';
   const published = benchmark.status === 'published';
-  const canDraft = exOwn(benchmark.owner) || exAllowed('lead','admin');
+  const canDraft = benchmark.canEdit;
   const accepted = benchmark.items.filter(item => item.reviewState === 'accepted').length;
   const unresolved = benchmark.items.filter(item=>item.reviewState === 'conflict').length;
-  const canPublish = !draft && !published && exAllowed('lead','admin') && benchmark.items.length > 0 && accepted === benchmark.items.length;
+  const canPublish = !draft && !published && exAllowed('expert') && benchmark.items.length > 0 && accepted === benchmark.items.length;
   const awaitFreeze = benchmark.status === 'reviewing' && benchmark.items.length && accepted === benchmark.items.length && !canPublish;
   const toolbar = draft && canDraft ? exButton('添加留出题','item-add',benchmark.id,{primary:true}) + exButton('提交专家盲评','benchmark-submit',benchmark.id,{disabled:!benchmark.items.length})
     : canPublish ? exButton('冻结并发布','benchmark-publish',benchmark.id,{primary:true})
     : published && !exAllowed('annotator') ? exButton('导出基准 JSON','benchmark-export',benchmark.id,{primary:true}) : '';
-  const agreement = !draft && exAllowed('lead','admin') ? `<button type="button" class="btn" data-review-agreement="${exText(benchmark.id)}">双评一致性</button>` : '';
+  const agreement = !draft && exAllowed('expert') ? `<button type="button" class="btn" data-review-agreement="${exText(benchmark.id)}">双评一致性</button>` : '';
   const stage = draft ? 0 : published || accepted === benchmark.items.length ? 3 : unresolved ? 2 : 1;
   const stages = ['题目构建','独立盲评','分歧仲裁','冻结发布'];
   const relevant = feedback.filter(entry => entry.benchmarkId === benchmark.id);
@@ -561,9 +556,9 @@ function exBenchmarkDetail(benchmark, feedback) {
   const design = spec ? `<h4>组卷蓝图 · 修订 ${exText(spec.revision)}</h4>${workTable(['材料门类','考查专题','设计题量'],spec.targets.map(t=>[exText(t.family),exText(t.topic),exText(t.quota)]))}` : '';
   const h = benchmark.handoff;
   const origin = h ? `<div class="ex-context"><h3>来源标注</h3><p>${exText(h.resourceTitle || h.annotationId)}${h.holdoutTitle?'　→　'+exText(h.holdoutTitle):''}</p>${h.transferReason?'<p>跨门类依据　'+exText(h.transferReason)+'</p>':''}${exButton('查看办理进度','handoff-trail',h.resourceId,{extra:` data-version="${exText(h.versionId)}" data-sample="${exText(h.sampleId)}"`})}</div>` : '';
-  const metadata = `<details class="ex-history"><summary>基准信息</summary><p>${benchmark.description ? exText(benchmark.description) + ' · ' : ''}编号 ${exText(benchmark.id)} · 命题人 ${exText(benchmark.owner)}${benchmark.version ? ' · 版本 ' + exText(benchmark.version) : ''}</p>${design}</details>`;
+  const metadata = `<details class="ex-history"><summary>基准信息</summary><p>${benchmark.description ? exText(benchmark.description) + ' · ' : ''}编号 ${exText(benchmark.id)} · 命题人 ${exText(reviewOwner(benchmark.owner))}${benchmark.version ? ' · 版本 ' + exText(benchmark.version) : ''}</p>${design}</details>`;
   const content = `<div class="stack" data-ex-item-browser="${exText(benchmark.id)}"><div class="ex-benchmark-overview"><ol class="ex-stages hitl-stages" aria-label="评测流程">${stages.map((label,index)=>`<li${index === stage?' aria-current="step"':''}><span>${index+1}</span>${label}</li>`).join('')}</ol></div>
-  ${awaitFreeze ? exHandoffRow('全部试题已定稿，待评测负责人冻结并发布基准。','lead','benchmarks',benchmark.id,chosen?.id) : ''}${origin}${topicNav}${benchmark.items.map(item => `<div data-ex-item-pane="${exText(item.id)}"${item.id !== chosen.id ? ' hidden' : ''}>${exBenchmarkItem(benchmark,item)}</div>`).join('') || exEmpty('暂无评测题')}${metadata}${exHistory(benchmark.history)}</div>`;
+  ${awaitFreeze ? exHandoffRow('全部试题已定稿，可交由评审专家冻结并发布。','expert-a','benchmarks',benchmark.id,chosen?.id) : ''}${origin}${topicNav}${benchmark.items.map(item => `<div data-ex-item-pane="${exText(item.id)}"${item.id !== chosen.id ? ' hidden' : ''}>${exBenchmarkItem(benchmark,item)}</div>`).join('') || exEmpty('暂无评测题')}${metadata}${exHistory(benchmark.history)}</div>`;
   return `${exPanel(benchmark.title,'',content,(toolbar || agreement) ? `<div class="ex-form-actions">${agreement}${toolbar}</div>` : '')}${published || relevant.length ? exFeedbackPanel(relevant,benchmark) : ''}`;
 }
 async function renderBenchmarks() {
@@ -582,7 +577,7 @@ async function renderBenchmarks() {
     const feedback=await api('/api/feedback');
     if (revision!==workView) return '';
     replaceReviewEntry('benchmarks','benchmark',detail.id);
-    const auto=exAllowed('operator','lead','admin') || (exAllowed('expert') && detail.status==='published') ? exButton('多维自动评测','evaluation-open',detail.id) : '';
+    const auto=exAllowed('expert') && detail.status==='published' ? exButton('多维自动评测','evaluation-open',detail.id) : '';
     return sectionHead('','基准评审与发布','',auto)+reviewBack('返回基准目录','benchmark-back')+`<div class="rd-detail">${exBenchmarkDetail(detail,feedback)}</div>`;
   }
   if (exState.benchmark) notify('该记录已移除或当前岗位无权查看，已返回基准目录。');
@@ -595,17 +590,17 @@ async function renderBenchmarks() {
     return reviewRecordRow([reviewNameButton(item.title,'benchmark-select',item.id),String(items.length),exText(stages[item.status]||'—'),exText(reviewOwner(item.owner)),exBadge(item.status)],
       [item.title,item.id,item.owner,reviewOwner(item.owner),item.version,item.description].filter(Boolean).join(' '));
   });
-  const create=exAllowed('operator','lead','admin')?exButton('新建评测基准','benchmark-new','',{primary:true}):'';
+  const create=exAllowed('expert')?exButton('新建评测基准','benchmark-new','',{primary:true}):'';
   const sources=workScopeRows(resources,'benchmarks').filter(r=>r.split==='holdout' && r.researchCase && !workCan('annotator')).sort((a,b)=>workCaseRank(a)-workCaseRank(b));
   const papers=reviewSourceShelf('科研留出文献',sources,r=>{
     const b=allBenchmarks.find(item=>item.items?.some(i=>i.resourceId===r.id));
     return b?reviewNameButton(b.title,'benchmark-select',b.id):exButton('查看制题条件','paper-handoff',r.researchCase==='sic-solvent-growth-v1'?'crystal':'research');
   });
-  const empty=benchmarks.length ? '没有匹配的记录' : '当前范围暂无评测基准。'+(exAllowed('operator','lead','admin') ? workBtn('打开基准设计与制备','nav','benchmark-work','link') : '');
+  const empty=benchmarks.length ? '没有匹配的记录' : '当前范围暂无评测基准。'+(exAllowed('expert') ? workBtn('打开基准设计与制备','nav','benchmark-work','link') : '');
   const directory='<section class="rd-panel">'+reviewListHeader('基准目录',benchmarks.length,workScopeMenu('benchmarks'))+
     reviewDirectory('benchmarks',['评测基准','题数','评审进度','命题人','状态'],rows,'搜索基准名称或编号',tabs,'',empty)+'</section>';
   let coverage='';
-  if(!benchmarks.length && workScopeValue('benchmarks')==='active' && exAllowed('operator','lead','admin')) {
+  if(!benchmarks.length && workScopeValue('benchmarks')==='active' && exAllowed('expert')) {
     const template=await api('/api/benchmark-work/template');
     if(revision!==workView)return '';
     coverage=blueprintCoveragePreview(template);
@@ -714,7 +709,7 @@ async function expertUiAction(action, el) {
       const {receiver, section, itemId} = el.dataset;
       if (!window.workspaceUser?.meeting || !exHandoffRoles.includes(receiver)) throw new Error('请联系承办岗位接续办理');
       if (!['annotations','benchmarks'].includes(section)) break;
-      window.workspaceUser = await api('/api/meeting/role','POST',{username:receiver});
+      await switchMeetingAccount(receiver);
       if (section === 'annotations') await openAnnotationRecord(id);
       else {
         if (itemId) exItemViews.set(id,itemId);
@@ -722,9 +717,9 @@ async function expertUiAction(action, el) {
       }
       break;
     }
-    case 'ex-handoff-operator':
-      if (!window.workspaceUser?.meeting) throw new Error('请由数据管理员接续办理');
-      window.workspaceUser=await api('/api/meeting/role','POST',{username:'operator'});
+    case 'ex-handoff-expert':
+      if (!window.workspaceUser?.meeting) throw new Error('请由评审专家接续办理');
+      await switchMeetingAccount(lastMeetingExpert);
       closeModal();
       await openAnnotationRecord(id);
       await openAnnotationBenchmarkHandoff(id);

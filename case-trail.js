@@ -38,18 +38,13 @@ function trailProgress(rows) {
 }
 function trailBenchmarkTask(benchmark) {
   const items=benchmark.items||[];
-  const actor=window.workspaceUser.username;
-  const lead=workCan('lead','admin');
+  const expert=workCan('expert');
   if(benchmark.status==='published') return ['查看冻结基准','',false];
-  if(benchmark.status==='draft') {
-    const canEdit=benchmark.owner===actor || lead;
-    return [canEdit?'编制评测题':'查看评测进度','命题人 · '+reviewOwner(benchmark.owner),canEdit];
-  }
-  const conflict=items.some(item=>item.reviewState==='conflict');
-  if(conflict && lead && benchmark.owner!==actor) return ['处理仲裁','评测负责人',true];
-  if(items.length && items.every(item=>item.reviewState==='accepted')) return [lead?'办理冻结发布':'查看评测进度','评测负责人',lead];
-  if(workCan('expert') && benchmark.owner!==actor && items.some(item=>item.reviewState==='pending'&&!item.hasReviewed)) return ['办理独立评分','评审专家',true];
-  return ['查看评测进度',conflict?'评测负责人仲裁':'评审专家独立评分',false];
+  if(benchmark.status==='draft') return [benchmark.canEdit?'编制评测题':'查看评测进度','命题人 · '+reviewOwner(benchmark.owner),Boolean(benchmark.canEdit)];
+  if(items.some(item=>item.canArbitrate)) return ['处理仲裁','评审专家',true];
+  if(items.length && items.every(item=>item.reviewState==='accepted')) return [expert?'办理冻结发布':'查看评测进度','评审专家',expert];
+  if(items.some(item=>item.canReview)) return ['办理独立评分','评审专家',true];
+  return ['查看评测进度',items.some(item=>item.reviewState==='conflict')?'评审专家仲裁':'评审专家独立评分',false];
 }
 function trailLatest(rows) {
   return rows.slice().sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
@@ -89,7 +84,7 @@ function trailChoose(data) {
 }
 function trailRows(record,data) {
   const {version,resource,batch,samples,sample,annotation,benchmark,extraction}=record;
-  const manager=workCan('operator','lead','admin');
+  const manager=workCan('operator');
   const approved=version.status==='approved';
   const rows=[trailStage('原文登记与核准',workStatuses[version.status]?.[0]||version.status,approved?'complete':'active',
     version.filename+' · v'+version.number,trailButton('source',approved||!manager?'查看原文':'办理原文核查',manager&&!approved),'数据管理员')];
@@ -97,7 +92,7 @@ function trailRows(record,data) {
   if(batch){
     const needsReview=sample?.status==='candidate' && sample.quality?.requiresExpert;
     const done=batch.status==='reviewed' && sample?.status==='passed';
-    const review=needsReview && workCan('expert','lead','admin');
+    const review=needsReview && workCan('expert');
     rows.push(trailStage('问答生成与质检',needsReview?'当前问答待专家复核':sample?.status==='rejected'?'当前问答已剔除':workStatuses[batch.status]?.[0]||batch.status,done?'complete':'active',
       batch.title+' · '+samples.length+' 条问答，'+pass+' 条通过',review?trailButton('inspect','复核当前问答',true):trailButton('batch',done||!manager?'查看语料批次':'办理当前批次',manager&&!done),needsReview?'评审专家':'数据管理员'));
   }else if(extraction){
@@ -108,10 +103,10 @@ function trailRows(record,data) {
     rows.push(trailStage('问答生成与质检',approved?'待制备':'待核准',approved?'active':'',
       approved?'输入已锁定为所选训练原文版本':'原文核准后可开始制备',approved&&manager?trailButton('prepare','从此版本开始制备',true):'','数据管理员'));
   }
-  const writable=workCan('operator','lead','admin','annotator');
+  const writable=workCan('annotator');
   if(annotation){
-    const reviewing=annotation.status==='submitted' && workCan('expert','lead','admin') && annotation.author!==window.workspaceUser.username;
-    const editing=['draft','returned'].includes(annotation.status)&&annotation.author===window.workspaceUser.username;
+    const reviewing=annotation.status==='submitted' && workCan('expert') && annotation.author!==window.workspaceUser.username;
+    const editing=annotation.canEdit;
     const state={approved:'复核通过',submitted:'待专家复核',draft:'草稿',returned:'已退回'}[annotation.status]||annotation.status;
     rows.push(trailStage('CoT 标注与专家复核',state,annotation.status==='approved'?'complete':'active',
       sample.question,trailButton('annotation',reviewing?'办理专家复核':editing?'继续标注':'查看标注工单',reviewing||editing),annotation.status==='submitted'?'评审专家':'标注人 · '+reviewOwner(annotation.author)));
@@ -131,9 +126,9 @@ function trailRows(record,data) {
       benchmark.title+bound,trailButton('benchmark',action,canAct),owner));
   }else{
     const ready=annotation?.status==='approved';
-    const next=ready?'由数据管理员或评测负责人选择独立留出题，核对证据及评分标准':'标注复核通过后，使用另一份留出原文出题';
+    const next=ready?'由评审专家选择独立留出题，核对证据及评分标准':'标注复核通过后，使用另一份留出原文出题';
     rows.push(trailStage('独立留出评测',ready?'待关联留出题':'待标注通过',ready?'active':'',next,
-      ready&&!workCan('annotator')?trailButton('handoff',manager?'制备关联评测':'查看评测交接',manager):'','数据管理员或评测负责人'));
+      ready&&!workCan('annotator')?trailButton('handoff',workCan('expert')?'制备关联评测':'查看评测交接',workCan('expert')):'','评审专家'));
   }
   return trailProgress(rows);
 }
@@ -147,7 +142,7 @@ async function renderCaseTrail() {
   const data={resources,extractions,batches,samples,annotations,benchmarks};
   const r=trailChoose(data);
   caseScreen=r;
-  const actions=workCan('operator','lead','admin')?workBtn('登记训练文件','resource-create','','primary','plus'):'';
+  const actions=workCan('operator')?workBtn('登记训练文件','resource-create','','primary','plus'):'';
   const dossier=r.resource?.researchCase;
   const routes={'sic-solvent-growth-v1':['crystal','碳化硅科研案例'],'dual-phase-annealing-v1':['research','双相钢科研案例']};
   const guide=routes[dossier] ? workBtn(routes[dossier][1],'nav',routes[dossier][0]) : '';

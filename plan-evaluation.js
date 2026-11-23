@@ -18,7 +18,7 @@ async function renderEvaluationDesk() {
   const gain=paired.map(r=>[escapeHtml(r.title),escapeHtml(r.model),escapeHtml(r.externalId),
     Object.keys(r.deltas||{}).length ? Object.entries(r.deltas).map(([k,v])=>escapeHtml(k)+' '+svcMetricText(v,true)).join('，'):'待回传可比指标',
     workBtn('核对基线','svc-run-view',r.id,'small')]);
-  const create=svcWriter()?profileButton('新建指标方案','new','PROFILE-MATERIALS-V1',true):'';
+  const create=workCan('expert')?profileButton('新建指标方案','new','PROFILE-MATERIALS-V1',true):'';
   return sectionHead('','评测指标与训练增益','') +
     workPanel('评测指标版本',workTable(['指标方案','状态','适用范围及修订说明','编制人','操作'],rows),create)+
     '<div id="met-training-gain">'+workPanel('训练增量分析',gain.length?workTable(['对照实验','底座模型','外部任务号','指标增量','操作'],gain):
@@ -31,7 +31,7 @@ async function metricProfileView(key, editing=false) {
   const p=data.profiles.find(p=>p.id===key);
   if(!p) throw new Error('当前岗位无法查看该指标版本');
   if(editing) {
-    if(!svcWriter()) throw new Error('当前岗位无权编制指标版本');
+    if(!workCan('expert')) throw new Error('当前岗位无权编制指标版本');
     const editingDraft=p.status==='draft';
     const weights=data.domains.map((d,i)=>'<label class="field">'+escapeHtml(d)+'（%）<input required type="number" name="w'+i+'" min="0" max="100" step="1" value="'+p.weights[d]+'"></label>').join('');
     openModal(editingDraft?'修订指标草案':'编制指标版本','<form class="stack" data-metric-form data-parent="'+escapeHtml(key)+'" data-edit="'+(editingDraft?'1':'')+'" data-revision="'+escapeHtml(p.revision||'')+'">'+workField('方案名称','title',{max:80,value:p.title})+
@@ -41,9 +41,9 @@ async function metricProfileView(key, editing=false) {
       '<div class="actions">'+workBtn('取消','dialog-close')+'<button type="submit" class="btn primary">保存待审批版本</button></div></form>');
     return;
   }
-  const mayEdit=p.status==='draft' && p.createdBy===window.workspaceUser.username;
-  const mayPublish=p.status==='draft' && workCan('lead','admin') && p.createdBy!==window.workspaceUser.username;
-  const next=svcWriter() && p.status==='published' && !data.profiles.some(other=>other.familyId===p.familyId && other.version>p.version);
+  const mayEdit=p.status==='draft' && workCan('expert') && p.createdBy===window.workspaceUser.username;
+  const mayPublish=p.status==='draft' && workCan('expert') && p.createdBy!==window.workspaceUser.username;
+  const next=workCan('expert') && p.status==='published' && !data.profiles.some(other=>other.familyId===p.familyId && other.version>p.version);
   openModal('评测指标口径','<div class="stack"><h3>'+escapeHtml(profileName(p))+'</h3>'+
     '<p>'+escapeHtml(p.reason)+'</p>'+metricWeights(p,data.domains)+
     '<p>每题按规则计 0–100 分，先取各能力域题目的平均分，再按权重汇总。全部有权重的能力域均有题目时给出综合分。通过线为 '+p.threshold+' 分。</p>'+
@@ -77,6 +77,6 @@ document.addEventListener('submit',async e=>{
     if(Object.values(weights).reduce((sum,v)=>sum+v,0)!==100)throw Error('请将五项能力的权重合计调整至 100%');
     const url=f.dataset.edit==='1'?metricProfilesPath+'/'+encodeURIComponent(f.dataset.parent)+'/revise':metricProfilesPath;
     await api(url,'POST',{parentId:f.dataset.parent,title:f.elements.title.value,weights,threshold:Number(f.elements.threshold.value),reason:f.elements.reason.value,revision:f.dataset.revision});
-    closeModal();await refresh();notify('指标版本已保存，待另一位负责人审批');
+    closeModal();await refresh();notify('指标版本已保存，待另一位评审专家审批');
   } catch(err) {notify(err.message,'error');} finally {button.disabled=false;}
 });

@@ -118,7 +118,7 @@
     state.result={title,rows,source:state.source};
     const html='<div class="document"><h3>'+escape(title)+'</h3>'+svcSummary(Object.entries(rows))+(why?'<p>'+escape(why)+'</p>':'')+extra+
       '<div class="actions"><button type="button" class="btn" data-mol="json">导出结果 JSON</button>'+
-      (workCan('operator','lead','admin')?'<button type="button" class="btn primary" data-mol="offer">作为资料登记</button>':'')+'</div></div>';
+      (workCan('operator')?'<button type="button" class="btn primary" data-mol="offer">作为资料登记</button>':'')+'</div></div>';
     document.getElementById('mol-result').innerHTML=html;
   }
   function showRecord(i) {
@@ -177,7 +177,7 @@
           result(name+' · 人工转录',{'识别方式':'人工对照图片转录','核对名称':name,'人工转录 SMILES':smiles},'记录保留操作者输入；SMILES 尚待独立结构验证。');break;
         }
         case 'json':if(state.result)downloadJson('材料结构核对.json',state.result);break;
-        case 'offer':if(state.result&&workCan('operator','lead','admin'))materialsOfferResult(state.result.title,state.result.rows,state.result.source);break;
+        case 'offer':if(state.result&&workCan('operator'))materialsOfferResult(state.result.title,state.result.rows,state.result.source);break;
       }
     }catch(err){notify(err.message,'error');}
   });

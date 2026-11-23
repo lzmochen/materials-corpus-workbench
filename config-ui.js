@@ -1,7 +1,7 @@
 'use strict';
 
 const tplPath = '/api/luoshu/configs';
-const tplCanWrite = () => workCan('operator','lead','admin');
+const tplCanWrite = () => workCan('operator');
 function tplFieldRow(value='',enabled=true) {
   return `<div class="tpl-field-row"><input aria-label="字段名称" name="field" value="${escapeHtml(value)}" maxlength="60" required>
     <label><input type="checkbox" aria-label="启用字段" ${enabled?'checked':''}> 启用</label>

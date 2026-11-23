@@ -8,7 +8,7 @@ const guideFamily=r=>r.materialFamily||r.category?.split('/')[0].trim()||'待归
 const guideResourceTopic=r=>r.topic||'待归类';
 const guideProvenance=r=>r.provenance||(['合成材料记录','合成试验数据'].includes(r.source)?'synthetic':'other');
 const guideOptions=values=>values.map(name=>[name,name]);
-const guideWritable=()=>workCan('operator','annotator','lead','admin');
+const guideWritable=()=>workCan('operator','annotator');
 
 function guideClassificationFields(r={}) {
   const field=(label,name,items,selected)=>`<label class="field">${label}<select name="${name}" required>${workSelect([['','请选择'],...guideOptions(items)],selected)}</select></label>`;

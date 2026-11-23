@@ -10,7 +10,15 @@ const workPages = {
   releases:['数据服务与发布','box'], runs:['训练支撑与增益','chart'], jobs:['加工任务','clock'],
   audit:['审计日志','shield'], accounts:['账号管理','user']
 };
-const workRoles = {admin:'管理员',operator:'数据管理员',annotator:'标注员',expert:'评审专家',lead:'评测负责人'};
+function workRole(role) { return ({admin:'operator',lead:'expert'})[role] || role; }
+async function switchMeetingAccount(username) {
+  if (!window.workspaceUser?.meeting) throw new Error('当前账号不能切换经办人。');
+  if (window.workspacePage==='annotations') keepAnnotationDraft();
+  const user = await api('/api/meeting/role','POST',{username});
+  window.workspaceUser=user;
+  if(Object.hasOwn(meetingExperts,username)) lastMeetingExpert=username;
+  return user;
+}
 const workStatuses = {
   registered:['已登记','neutral'],parsing:['解析中','blue'],parsed:['待核查','amber'],approved:['已核准','green'],
   queued:['已排队','neutral'],running:['运行中','blue'],completed:['已完成','green'],failed:['失败','red'],
@@ -62,7 +70,7 @@ function workBtn(label,action,id='',tone='',glyph='') {
 function workSelect(values, selected='') {
   return values.map(([value,label])=>`<option value="${escapeHtml(value)}" ${value===selected?'selected':''}>${escapeHtml(label)}</option>`).join('');
 }
-function workCan(...roles){return roles.includes(window.workspaceUser?.role);}
+function workCan(...roles){return roles.includes(workRole(window.workspaceUser?.role));}
 function workTime(value) {
   if (!value) return '—';
   const date = new Date(value);
@@ -167,7 +175,7 @@ async function refresh() {
 async function navigate(route,review) {
   route=platformRoute(route);
   if (!Object.hasOwn(workPages,route) || !window.workspaceUser) return;
-  if ((route==='audit' && !workCan('lead','admin')) || (route==='accounts' && !workCan('admin'))) route='resources';
+  if (['audit','accounts'].includes(route) && !workCan('operator')) route='resources';
   if (window.workspacePage==='annotations' && wb('[data-form="ex-annotation-edit"]')?.dataset.owner===window.workspaceUser.username) keepAnnotationDraft();
   window.workspacePage=route;
   if (location.hash!==`#${route}`) {
@@ -194,9 +202,9 @@ function collectWorkItems(data, desk = 'inbox') {
     ranks.set(r.id,workCaseRank(source));
   }
   const entries = [];
-  const operator = workCan('operator','lead','admin');
-  const supervisor = workCan('lead','admin');
-  const annotator = operator || workCan('annotator');
+  const operator = workCan('operator');
+  const expert = workCan('expert');
+  const annotator = workCan('annotator');
   const username = window.workspaceUser.username;
   const annotated = new Set(allRecords.annotations.map(record => record.sampleId));
   const add = (stage, name, id, date, label, action, target = id) => entries.push({stage,name,id,date,label,action,target});
@@ -219,39 +227,39 @@ function collectWorkItems(data, desk = 'inbox') {
   for (const sample of data.samples) {
     if (sample.status === 'passed' && !annotated.has(sample.id) && annotator) {
       add('思维链标注',sample.question,sample.id,sample.createdAt,'去标注','home-new-annotation');
-    } else if (sample.status === 'candidate' && sample.quality?.eligible && sample.quality.requiresExpert && workCan('expert','lead','admin')) {
+    } else if (sample.status === 'candidate' && sample.quality?.eligible && sample.quality.requiresExpert && workCan('expert')) {
       add('样本质检',sample.question,sample.id,sample.createdAt,'复核样本','sample-open');
     }
   }
   for (const record of data.annotations) {
-    if (annotator && record.author === username && ['draft','returned'].includes(record.status)) {
+    if (annotator && record.canEdit && ['draft','returned'].includes(record.status)) {
       add('思维链标注',record.question,record.id,record.updatedAt || record.createdAt,record.status==='returned'?'修订标注':'继续标注','home-annotation');
-    } else if (record.status === 'submitted' && workCan('expert','lead','admin') && record.author !== username) {
+    } else if (record.status === 'submitted' && workCan('expert') && record.author !== username) {
       add('标注复核',record.question,record.id,record.updatedAt || record.createdAt,'复核标注','home-annotation');
     }
   }
   for (const record of data.benchmarks) {
     const items = record.items || [];
     let label = '';
-    if (record.status === 'draft' && operator && (supervisor || record.owner === username)) label = '编制评测题';
+    if (record.status === 'draft' && expert && record.canEdit) label = '编制评测题';
     if (record.status === 'reviewing') {
-      if (workCan('expert') && record.owner !== username && items.some(item => item.reviewState === 'pending' && !item.hasReviewed)) label = '独立评分';
-      if (supervisor && record.owner !== username && items.some(item => item.reviewState === 'conflict')) label = '处理仲裁';
-      if (supervisor && items.length && items.every(item => item.reviewState === 'accepted')) label = '发布基准';
+      if (expert && items.some(item => item.canReview)) label = '独立评分';
+      if (expert && items.some(item => item.canArbitrate)) label = '处理仲裁';
+      if (expert && items.length && items.every(item => item.reviewState === 'accepted')) label = '发布基准';
     }
     if (label) add('基准评审',record.title,record.id,record.updatedAt || record.createdAt,label,'home-benchmark');
   }
-  if (supervisor) {
-    for (const release of data.releases.filter(item => item.status === 'draft')) {
+  if (operator || expert) {
+    for (const release of data.releases.filter(item => item.status === 'draft' && svcCanRelease(item.kind))) {
       const ready = release.kind==='training'
         ? release.batchIds.every(id=>data.batches.some(b=>b.id===id && b.status==='reviewed' && b.counts.passed>0 && !b.counts.candidate))
         : data.benchmarks.some(b=>b.id===release.benchmarkId && b.status==='published');
       add('版本审批',release.title,release.id,release.createdAt,ready?'审批版本':'查看发布条件','home-release');
     }
   }
-  if (operator) {
+  if (operator || expert) {
     for (const ticket of data.feedback) {
-      if (ticket.status !== 'resolved' && (!ticket.assignee || ticket.assignee === username || supervisor)) {
+      if (exCanProgressFeedback(ticket) && (operator || ticket.assignee===username)) {
         add('语料补充',ticket.title,ticket.id,ticket.updatedAt || ticket.createdAt,ticket.status==='open'?'受理工单':'登记处理结果','home-feedback');
       }
     }
@@ -294,7 +302,7 @@ function resourceApproveForm(value){
 }
 
 const qualityLabels={accuracy:'准确性',completeness:'完整性',consistency:'一致性',diversity:'多样性',format:'规范性',traceability:'可追溯性'};
-const workflowWriters=['operator','lead','admin'];
+const workflowWriters=['operator'];
 async function batchForm(mode, selection='') {
   const [resourceId,versionId]=selection.split('|');
   const resources=await api('/api/resources');
@@ -377,7 +385,7 @@ function attachBatchPreview(form,isTeacher) {
 async function sampleOpen(id) {
   const sample=await api(`/api/samples/${id}`);
   const quality=sample.quality;
-  const reviewerRoles=sample.mode==='teacher'?['expert','lead','admin']:workflowWriters;
+  const reviewerRoles=sample.mode==='teacher'?['expert']:workflowWriters;
   const canReview=Boolean(quality)&&!sample.review&&workCan(...reviewerRoles);
   const annotation=sample.status==='passed' ? (await api('/api/annotations')).find(item=>item.sampleId===id) : null;
   let decisions=[];
@@ -405,8 +413,13 @@ async function renderWorkAudit() {
   return `${sectionHead('','审计日志','',workBtn('刷新日志','refresh'))}${workPanel('最近 100 条记录',audit.length?workTable(['时间','操作','业务对象','操作者','详情'],audit.map(item=>[workTime(item.at),escapeHtml(translations[item.action]??item.action),`<span class="mono">${escapeHtml(item.target)}</span>`,escapeHtml(item.actor),escapeHtml(item.detail)])):workEmpty('暂无记录'))}`;
 }
 async function renderWorkAccounts() {
+  if (window.workspaceUser.meeting) {
+    const members=[[workRoles.operator,'operator'],[workRoles.annotator,'annotator'],
+      ...Object.values(meetingExperts).map(name=>[name,'expert'])];
+    return sectionHead('','岗位成员','')+workPanel('岗位成员',workTable(['经办人','业务角色'],members.map(([name,role])=>[escapeHtml(name),workRoles[role]])));
+  }
   const accounts=await api('/api/users');
-  return `${sectionHead('','账号管理','',workBtn('创建账号','account-create','','primary','plus'))}${workPanel('当前账号',workTable(['账号','显示名称','角色'],accounts.map(item=>[escapeHtml(item.username),escapeHtml(item.display),escapeHtml(workRoles[item.role])])) )}`;
+  return `${sectionHead('','账号管理','',workBtn('创建账号','account-create','','primary','plus'))}${workPanel('当前账号',workTable(['账号','显示名称','角色'],accounts.map(item=>[escapeHtml(item.username),escapeHtml(item.display),escapeHtml(workRoles[workRole(item.role)])])) )}`;
 }
 async function workReadFile(file) {
   if (!file?.size) throw new Error('请选择非空文件。');
@@ -578,14 +591,14 @@ document.addEventListener('change',async event=>{
       return;
     }
     if (el.id==='work-sample-status') {workSampleStatus=el.value; await refresh(); return;}
-    if (el.id==='work-meeting-role' && window.workspaceUser?.meeting) {
-      if (window.workspacePage==='annotations') keepAnnotationDraft();
+    if (['work-meeting-role','work-meeting-expert'].includes(el.id) && window.workspaceUser?.meeting) {
       el.disabled=true;
       try {
-        window.workspaceUser=await api('/api/meeting/role','POST',{username:el.value});
+        const next=el.id==='work-meeting-role' && el.value==='expert' ? lastMeetingExpert : el.value;
+        await switchMeetingAccount(next);
         await navigate(window.workspacePage);
       } finally {
-        el.value=window.workspaceUser.username;
+        el.value=el.id==='work-meeting-role'?workRole(window.workspaceUser.role):window.workspaceUser.username;
         el.disabled=false;
       }
       return;

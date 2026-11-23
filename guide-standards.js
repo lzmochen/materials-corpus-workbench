@@ -4,8 +4,8 @@
   const base = '/api/guide-registry';
   const stageLabel = {draft:'内部草案', consult:'征求意见中', final:'内部定稿'};
   const fieldLabels = {title:'名称', mode:'制修订类型', supersedes:'拟修订标准及版本', scope:'适用范围', basis:'依据', clauses:'条款', owner:'责任或权利人', planned:'计划件数', kind:'成果类别', issuer:'发布机构', date:'日期', evidence:'凭证', number:'编号', result:'意见结论', opinionId:'意见编号', note:'说明'};
-  const writers = () => workCan('admin','lead','operator');
-  const leads = () => workCan('admin','lead');
+  const writers = () => workCan('operator');
+  const leads = () => workCan('expert');
   const h = value => escapeHtml(value);
   const path = (kind,id='',action='') => base + '/' + kind + (id ? '/'+encodeURIComponent(id) : '') + (action ? '/'+action : '');
 
@@ -53,7 +53,7 @@
       return `<li><div class="split"><b>${h(op.actor)}</b><small>${workTime(op.at)}</small></div><p>${h(op.note)}</p>
         ${decision?`<p><span class="badge blue">${h(decision.result)}</span> ${h(decision.note)}</p>`:handling || '<span class="badge amber">待处理</span>'}</li>`;
     }).join('');
-    return `<section><div class="split"><h3>征求意见 · ${rec.opinions.length}</h3>${rec.stage==='consult'?button('提交意见','opinion','standards',rec.id):''}</div>
+    return `<section><div class="split"><h3>征求意见 · ${rec.opinions.length}</h3>${rec.stage==='consult' && workCan('expert')?button('提交意见','opinion','standards',rec.id):''}</div>
       ${list?`<ul class="gstd-notes">${list}</ul>`:'<p class="gstd-source">暂无意见记录</p>'}</section>`;
   }
   function historyDetail(detail) {

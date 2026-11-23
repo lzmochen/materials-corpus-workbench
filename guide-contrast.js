@@ -15,7 +15,7 @@ async function guideContrastOpen(initialIds = []) {
       seenBlocks.add(pair.evidence.text);
     }
   }
-  const canTrain = ['operator','lead','admin'].includes(window.workspaceUser?.role);
+  const canTrain = workCan('operator');
   const choices = pairs.map(pair=>`<label class="cx-pair"><input type="checkbox" name="pair" value="${exText(pair.id)}"${selected.has(pair.id) ? ' checked' : ''}>
     <span><strong>${exText(pair.image.title)}</strong><small>${exText(pair.text.title)} · ${exText(pair.evidence.location)}</small></span><em>${exText(pair.materialFamily)}</em></label>`).join('');
   const history = runs.map(run=>`<div class="ge-history"><div><strong>${exText(run.id)}</strong><small>${exText(exDate(run.createdAt))} · ${run.pairCount} 组 · ${run.epochs} 轮</small></div>

@@ -20,7 +20,7 @@ const benchmarkPreparation = (() => {
   const status = {design:'设计中',draft:'已制备草稿',reviewing:'专家评审中',published:'已发布'};
   let active = '', meta, page, selection = new Set(), selectionKey = '', loadSeq = 0;
   const h = value => escapeHtml(value);
-  const writer = () => workCan('operator','lead','admin');
+  const writer = () => workCan('expert');
   const targetKey = t => t.family+'|'+t.topic;
   function button(label, action, id='', tone='') {
     return '<button type="button" class="btn '+tone+'" data-bprep="'+action+'" data-id="'+h(id)+'">'+h(label)+'</button>';
@@ -90,7 +90,7 @@ const benchmarkPreparation = (() => {
   function panel() {
     const p=page.plan, details=p.benchmarkId?'制备基准':p.id?'编制人':'方案状态';
     const value=p.benchmarkId?status[p.status]:p.id?p.owner:'未保存';
-    const displayOwner={operator:'数据管理员',lead:'评测负责人',admin:'管理员'};
+    const displayOwner=reviewOwnerNames;
     return '<div class="bp">'+toolbar()+'<section class="bp-plan"><div><h2>'+h(p.title)+'</h2><p>'+h(p.objective)+'</p></div><dl>'+
       '<div><dt>目标题量</dt><dd>'+total(p)+' 题</dd></div>'+
       (p.benchmarkId?'<div><dt>入卷来源</dt><dd>'+new Set(p.imported.map(i=>i.versionId)).size+' 个版本</dd></div>':'')+
@@ -331,10 +331,10 @@ function agreementDetail(row) {
 }
 
 async function openReviewAgreement(id) {
-  if (!exAllowed('lead','admin')) return;
+  if (!exAllowed('expert')) return;
   const who = window.workspaceUser.username;
   const data = await api('/api/benchmarks/'+exPath(id));
-  if (who !== window.workspaceUser?.username || !exAllowed('lead','admin') || data.status==='draft') return;
+  if (who !== window.workspaceUser?.username || !exAllowed('expert') || data.status==='draft') return;
   const {rows,awaiting,missing} = agreementRows(data);
   const n = rows.length;
   const metrics = ['一致','待仲裁','已仲裁'].map(label=>rows.filter(r=>r.state===label).length);

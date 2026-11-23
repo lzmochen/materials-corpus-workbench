@@ -23,7 +23,7 @@ const materialToolGroups=[
    ['knowledge','已核准知识库','按属性、来源或关键词查找核准的抽取条目。','检索知识']]]
 ];
 function renderMaterialsTools(){
- const writer=workCan('operator','lead','admin');
+ const writer=workCan('operator');
  const shelves=materialToolGroups.map(([name,entries])=>'<section class="tools-shelf"><header><h2>'+name+'</h2></header>'+
  entries.map(([key,title,desc,action])=>'<article class="tool-row"><div><h3>'+title+'</h3><p>'+desc+'</p></div>'+
  (['text','paper','custom'].includes(key)&&!writer?'<span class="biz-role">数据管理员办理</span>':'<button type="button" class="btn" data-material-tool="'+key+'">'+action+'</button>')+'</article>').join('')+'</section>').join('');

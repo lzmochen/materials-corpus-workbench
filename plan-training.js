@@ -18,7 +18,7 @@ async function supplyViews() {
 }
 async function supplyViewForm() {
   const releases=svcPublished(await api('/api/releases'),'training');
-  if(!releases.length){openModal('编排交付视图',workEmpty('暂无已发布训练集','先将质检通过的批次编入训练集，再由评测负责人审批并冻结版本。')+
+  if(!releases.length){openModal('编排交付视图',workEmpty('暂无已发布训练集','先将质检通过的批次编入训练集，再由数据管理员审批并冻结训练集版本。')+
     '<div class="actions">'+workBtn('新建训练集版本','svc-release-new','training','primary')+workBtn('发布版本台账','nav','releases')+'</div>');return;}
   const fields='<fieldset class="field"><legend>已发布训练集</legend>'+releases.map(r=>'<label class="row"><input type="checkbox" name="releaseIds" value="'+svcEscape(r.id)+'"><span>'+svcEscape(svcVersionName(r))+' · '+r.itemCount+' 条</span></label><label class="field">该版本抽取上限<input type="number" min="1" max="1000000" step="1" name="quota/'+svcEscape(r.id)+'" placeholder="留空则全选符合条件的条目"></label>').join('')+'</fieldset>';
   const minimum=new Date().toISOString().slice(0,10);

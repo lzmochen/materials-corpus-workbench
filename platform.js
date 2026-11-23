@@ -1,5 +1,10 @@
 'use strict';
 
+const workRoles = {operator:'数据管理员',annotator:'语料标注员',expert:'评审专家'};
+const meetingExperts = {'expert-a':'专家甲','expert-b':'专家乙',lead:'专家丙','expert-d':'专家丁'};
+let lastMeetingExpert = 'expert-a';
+
+
 const platformModules = [
   {key:'resources', title:'训练资源目录构建与统一管理', label:'训练资源目录', icon:'archive', routes:['resources','jobs']},
   {key:'generation', title:'高质量训练数据生成与语料蒸馏', label:'数据生成与蒸馏', icon:'layers', routes:['generation','batches','batch-record','extraction','pipeline-work','quality-work','releases','runs','materials-tools']},
@@ -36,14 +41,14 @@ function platformModule(route){return platformModules.find(m=>m.routes.includes(
 function platformShell() {
   const user=window.workspaceUser, route=window.workspacePage;
   const chosen=platformModule(route);
-  const rolePicker=[['operator','数据管理员'],['annotator','语料标注员'],['expert-a','评审专家 A'],['expert-b','评审专家 B'],['lead','评测负责人']];
-  const role=user.meeting?`<label class="p-role">${platIcon('person')}<select id="work-meeting-role" aria-label="当前岗位">${workSelect(rolePicker,user.username)}</select></label>`:`<span class="p-user">${platIcon('person')}${escapeHtml(user.display)}</span>`;
+  if (Object.hasOwn(meetingExperts,user.username)) lastMeetingExpert=user.username;
+  const role=user.meeting?`<label class="p-role">${platIcon('person')}<select id="work-meeting-role" aria-label="当前岗位">${workSelect(Object.entries(workRoles),workRole(user.role))}</select></label>`:`<span class="p-user">${platIcon('person')}${escapeHtml(user.display)}</span>`;
   const routes=[{key:'home',label:'工作台',title:'工作台',icon:'dashboard'},...platformModules];
   return `<div class="app platform"><a href="#content" class="p-skip">跳至内容</a><header class="p-top"><div class="p-top-inner">
     <button type="button" class="p-brand" data-action="nav" data-id="home">${platMark()}<span>材料语料平台</span></button><span class="p-org">北京科技大学</span>
     <div class="p-utils"><button class="p-tool p-find" type="button" data-action="platform-search" aria-label="全站检索">${platIcon('search')}<span>全站检索</span><kbd>⌘ K</kbd></button>
-    <button class="p-tool p-help" type="button" data-public-help aria-label="使用帮助">${platIcon('book')}<span>使用帮助</span></button>
-    <button class="p-tool" type="button" data-action="platform-inbox" aria-label="岗位待办">${platIcon('inbox')}<span>待办</span></button>
+
+    <button class="p-tool p-help" type="button" data-workspace-help aria-label="使用帮助">${platIcon('book')}<span>使用帮助</span></button><button class="p-tool" type="button" data-action="platform-inbox" aria-label="岗位待办">${platIcon('inbox')}<span>待办</span></button>
     <button class="p-tool p-settings" type="button" data-action="platform-tools" aria-label="业务工具" title="业务工具">${platIcon('tools')}</button>${role}</div></div></header>
     <nav class="p-nav" aria-label="业务导航"><div class="p-nav-inner">${routes.map(m=>{const active=chosen?.key===m.key || route===m.key || (['workflow','research','crystal','function-index'].includes(route) && m.key==='home');return `<button type="button" class="p-tab ${active?'active':''}" data-action="nav" data-id="${m.key}" title="${m.title}" ${active?'aria-current="page"':''}>${platIcon(m.icon)}<span>${m.label}</span></button>`;}).join('')}</div></nav>
     <main id="content" class="content p-content" tabindex="-1"><div class="initial-load" role="status">正在读取业务记录…</div></main></div>`;
@@ -108,9 +113,13 @@ document.addEventListener('change', event => {
 
 function platformMount(route,html) {
   const root=wb('#content'), temp=document.createElement('template');temp.innerHTML=html;
-  const old=temp.content.querySelector('.section-head'), actions=old?.querySelector('.section-actions')?.innerHTML||'';
+  const old=temp.content.querySelector('.section-head');
+  const user=window.workspaceUser;
+  const expertDesk=workCan('expert') && ['annotations','benchmark-work','benchmarks','evaluation-desk','releases','quality-work','batch-record'].includes(route);
+  const person=expertDesk && user.meeting ? '<label class="work-record-scope">经办专家<select id="work-meeting-expert" aria-label="当前经办专家">'+workSelect(Object.entries(meetingExperts),user.username)+'</select></label>' : '';
+  const actions=person+(old?.querySelector('.section-actions')?.innerHTML||'');
   const mod=platformModule(route);
-  let title=workPages[route][0], secondary='';
+  let title=route==='accounts' && user.meeting ? '岗位成员' : workPages[route][0], secondary='';
   if(mod && route===mod.key) title=mod.label;
   const sections = mod?.key === 'benchmarks' ? [['benchmark-work','基准设计与制备'],['benchmarks','基准评审与发布'],['evaluation-desk','评测指标与增益']] : [];
   if(sections.length) {
@@ -137,7 +146,7 @@ function utilityButton(action,id,title,meta,icon='book'){
   return `<button type="button" class="p-record" data-action="${action}" data-id="${escapeHtml(id)}"><span class="p-record-icon">${platIcon(icon)}</span><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>${platIcon('arrow')}</button>`;
 }
 function homeModuleActions(moduleKey,data,tasks=collectWorkItems(data,'home')) {
-  const manager=workCan('operator','lead','admin');
+  const manager=workCan('operator');
   const button=(label,attrs)=>'<button type="button" '+attrs+'>'+escapeHtml(label)+'</button>';
   const firstTask=(stage,action)=>tasks.find(item=>item.stage===stage && (!action || item.action===action));
   const taskLink=(item,label)=>workBtn(label||item.label,item.action,item.target,'small');
@@ -169,12 +178,12 @@ function homeModuleActions(moduleKey,data,tasks=collectWorkItems(data,'home')) {
   const item=firstTask('基准评审');
   if(item){
     const record=data.benchmarks.find(b=>b.id===item.target);
-    const question=record?.items?.find(q=>item.label==='处理仲裁'?q.reviewState==='conflict':item.label==='独立评分'&&q.reviewState==='pending'&&!q.hasReviewed);
+    const question=record?.items?.find(q=>item.label==='处理仲裁'?q.canArbitrate:item.label==='独立评分'&&q.canReview);
     links.push(button(item.label,'data-action="home-benchmark" data-id="'+escapeHtml(item.target)+'"'+(question?' data-question-id="'+escapeHtml(question.id)+'"':'')));
   }
-  links.push(button(manager?'设计评测蓝图':'查看制备模板','data-bprep="open" data-id="template"'));
-  if(!item && manager)links.push(button('新建评测基准','data-action="ex-benchmark-new"'));
-  if(!item && !manager){
+  links.push(button(workCan('expert')?'设计评测蓝图':'查看制备模板','data-bprep="open" data-id="template"'));
+  if(!item && workCan('expert'))links.push(button('新建评测基准','data-action="ex-benchmark-new"'));
+  if(!item && !workCan('expert')){
     const published=workScopeRows(data.benchmarks,'home').find(b=>b.status==='published');
     if(published)links.push(workBtn('查看冻结基准','home-benchmark',published.id,'small'));
   }
@@ -212,7 +221,7 @@ function platformTaskRows(stage){
 async function platformUtility(type){
   const rev=++utilityVersion;
   if(type==='tools'){
-    const items=[['jobs','加工队列'],...(workCan('lead','admin')?[['audit','审计日志']]:[]),...(workCan('admin')?[['accounts','账号管理']]:[])];
+    const items=[['jobs','加工队列'],...(workCan('operator')?[['audit','审计日志'],['accounts',window.workspaceUser.meeting?'岗位成员':'账号管理']]:[])];
     const sections=[
       ['业务办理', [['workflow','全流程办理']]],
       ['科研案例', [['crystal','碳化硅晶体生长'],['research','双相钢科研案例']]],
@@ -241,9 +250,9 @@ document.addEventListener('change',e=>{if(e.target.id==='platform-stage') wb('#p
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'&&window.workspaceUser&&!wb('#workspace-dialog').open){e.preventDefault();platformUtility('search').catch(err=>notify(err.message,'error'));}});
 
 document.addEventListener('click',event=>{
-  if(!event.target.closest('[data-public-help]')) return;
+  if(!event.target.closest('[data-workspace-help]')) return;
   openModal('使用帮助',`<div class="stack public-help"><p>岗位可在右上角切换，操作记录保存在当前浏览器。</p>
-    <div class="actions"><a class="btn primary" href="/materials-corpus-workbench/quickstart.pdf" target="_blank" rel="noopener">简明使用说明（PDF）</a><a class="btn" href="/materials-corpus-workbench/manual.pdf" target="_blank" rel="noopener">详细使用说明（PDF）</a></div>
+    <div class="actions"><a class="btn primary" href="/materials-corpus-workbench/quickstart.pdf" target="_blank" rel="noopener">简明使用说明（PDF）</a><a class="btn" href="/materials-corpus-workbench/manual.pdf" target="_blank" rel="noopener">详细使用说明（PDF）</a><a class="btn" href="/materials-corpus-workbench/roles.pdf" target="_blank" rel="noopener">岗位权限清单（PDF）</a></div>
     <div class="actions"><a href="/materials-corpus-workbench/practice-files.zip" download="科研语料操作材料.zip">下载科研语料操作材料</a></div>
     <h3>操作视频</h3><div class="actions"><a class="btn primary" href="/materials-corpus-workbench/crystal-tutorial.html" target="_blank" rel="noopener">碳化硅晶体生长</a><a class="btn" href="/materials-corpus-workbench/research-tutorial.html" target="_blank" rel="noopener">双相钢文献科研案例</a></div></div>`);
 });

@@ -8,7 +8,7 @@ const pipeUi={selected:'',state:'',tab:'',sources:[],run:null,timer:null};
 function pipeButton(action,label,id='',primary=false){
   return '<button type="button" class="btn '+(primary?'primary':'small')+'" data-pipe="'+action+'" data-id="'+escapeHtml(id)+'">'+escapeHtml(label)+'</button>';
 }
-function pipeWriter(){return workCan('operator','lead','admin');}
+function pipeWriter(){return workCan('operator');}
 function pipeBadge(key){
   const tone={review:'amber',quality:'amber',failed:'red',excluded:'red',generation:'blue',queued:'neutral',finished:'green'}[key]||'neutral';
   return '<span class="badge '+tone+'">'+escapeHtml(pipeStates[key]||key)+'</span>';
@@ -30,7 +30,7 @@ function pipeKnowledge(r){
   const t=r.extraction;
   return workTable(['对象','属性','取值','证据位置','核查状态','操作'],t.records.map(k=>[
     escapeHtml(k.subject),escapeHtml(k.field),'<strong>'+escapeHtml(k.value)+'</strong>',escapeHtml(k.location),
-    escapeHtml(pipeRecordStates[k.status]),pipeButton('record',k.status==='pending'&&workCan('operator','expert','lead','admin')?'对照核查':'查看记录',k.id)
+    escapeHtml(pipeRecordStates[k.status]),pipeButton('record',k.status==='pending'&&workCan('operator','expert')?'对照核查':'查看记录',k.id)
   ]));
 }
 function pipeSamples(r,bySample){
@@ -49,7 +49,7 @@ function pipeContent(r,bySample){
   const tabs=[...(t?[['knowledge','核查条目 · '+t.counts.total]]:[]),['samples','产出样本 · '+r.samples.length],['source','输入版本']];
   if(!tabs.some(([id])=>id===pipeUi.tab))pipeUi.tab=t&&!b?'knowledge':'samples';
   const actions=[];
-  if(t&&!b&&['review','excluded'].includes(r.state)&&workCan('operator','expert','lead','admin')){
+  if(t&&!b&&['review','excluded'].includes(r.state)&&workCan('operator','expert')){
     const next=t.records.find(x=>x.status==='pending')||t.records[0];
     actions.push(pipeButton('record',r.state==='excluded'?'重新核查条目':'核查下一条',next.id,true));
   }
@@ -126,7 +126,7 @@ function pipeConfig(form){
 function pipeRecord(id){
   const r=pipeUi.run,t=r?.extraction,k=t?.records.find(x=>x.id===id);
   if(!k)return;
-  const can=workCan('operator','expert','lead','admin')&&!t.batchId;
+  const can=workCan('operator','expert')&&!t.batchId;
   const points=Array.from(k.evidence);
   const text=points.slice(k.start,k.end).join('')===k.value
     ? escapeHtml(points.slice(0,k.start).join(''))+'<mark>'+escapeHtml(k.value)+'</mark>'+escapeHtml(points.slice(k.end).join('')):escapeHtml(k.evidence);

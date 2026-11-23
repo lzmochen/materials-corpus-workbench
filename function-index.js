@@ -43,7 +43,7 @@ function businessIndexRows(){
    if(!active.length)return '';
    return '<section class="biz-section"><header><h2>'+title+'</h2><span>'+area+'</span></header>'+
      active.map(f=>'<article class="biz-row"><span class="biz-code">'+f.code+'</span><div><h3>'+f.name+'</h3><p>'+f.desc+'</p></div>'+
-       (i>=4 && !svcWriter()?'<span class="biz-role">数据管理员或负责人办理</span>':'<button class="btn" type="button" data-biz-open="'+f.code+'">'+f.act+'</button>')+'</article>').join('')+'</section>';
+       (i>=4 && !svcWriter()?'<span class="biz-role">数据管理员办理</span>':'<button class="btn" type="button" data-biz-open="'+f.code+'">'+f.act+'</button>')+'</article>').join('')+'</section>';
  }).join('');
  return sections||workEmpty('没有匹配的功能','可按名称、操作或章节编号检索。');
 }

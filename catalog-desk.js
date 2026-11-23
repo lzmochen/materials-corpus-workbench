@@ -4,7 +4,7 @@ let catPage=1, catFilterSignature='';
 const catPageSize=8;
 const catSelected=new Set();
 const catActive=item=>item.versions.find(v=>v.id===item.activeVersion);
-const catWritable=()=>workCan('operator','lead','admin');
+const catWritable=()=>workCan('operator');
 const catAccessible=item=>item.split!=='holdout'||!workCan('annotator');
 const catEligible=item=>catAccessible(item)&&catWritable()&&catActive(item)?.status==='approved';
 const catUses=[['train','训练资源'],['holdout','评测留出']];
@@ -488,7 +488,7 @@ function catalogReceiptPanel(part,source,receipt){
   if(part==='metadata'){
     const owner=window.workspaceUser;
     const ledger=receipt.batches.map(b=>b.id+' · 第 '+b.number+' 行'+(b.status==='reused'?'（原件已归档）':'')).join('、');
-    return catalogMeta([['接入方式',receipt.channel],['登记时间',workTime(version.createdAt)],['登记人',version.createdBy],...(ledger?[['关联采集批次',ledger]]:[]),['文件校验值（SHA-256）',version.sha256],['当前岗位',workRoles[owner.role]||owner.display],['原文读取',resource.split==='holdout'?'仅数据管理员、评审专家和评测负责人可读':'训练原文可读'],['规范化导出',receipt.canExport?'允许导出本版本':catWritable()?'原文核准后可导出':'当前岗位无导出权限'],['语料交付','由数据管理员或评测负责人登记冻结版本的接收方']]);
+    return catalogMeta([['接入方式',receipt.channel],['登记时间',workTime(version.createdAt)],['登记人',version.createdBy],...(ledger?[['关联采集批次',ledger]]:[]),['文件校验值（SHA-256）',version.sha256],['当前岗位',workRoles[workRole(owner.role)]||owner.display],['原文读取',resource.split==='holdout'?'仅数据管理员和评审专家可读':'训练原文可读'],['规范化导出',receipt.canExport?'允许导出本版本':catWritable()?'原文核准后可导出':'当前岗位无导出权限'],['语料交付','由数据管理员登记冻结版本的接收方']]);
   }
   const assets=receipt.releases;
   return '<h4>收录本版本的已发布数据集</h4>'+(assets.length?workTable(['数据集版本','类型','收录条目'],assets.map(item=>[
@@ -511,7 +511,7 @@ async function loadCatalogReceipt(detail,part){
   }
 }
 function catalogApiForm(){
-  if(!catWritable())throw new Error('请切换至数据管理员或评测负责人办理采集。');
+  if(!catWritable())throw new Error('请切换至数据管理员办理采集。');
   const native=![...document.scripts].some(s=>s.src.includes('browser-bridge.js'));
   openModal('接口采集',`<form class="stack" data-catalog-api><div class="document"><h3>结构化数据接入</h3><code>POST /api/catalog-intake</code><p>${native?'外部系统通过已授权的会话逐批提交报文，使用同一请求编号可检查并重试同一批次。':'在本浏览器导入业务系统导出的 JSON 报文。面向外部系统的持续推送需接入服务端部署。'}</p></div><label class="field">导入 JSON 报文<input type="file" accept=".json,application/json" data-catalog-payload></label><label class="field">请求内容<textarea name="payload" rows="9" required placeholder="填入来源、权属、请求编号和试验记录"></textarea></label><p class="form-error" role="alert" data-catalog-error></p><div class="actions">${catalogReceiptButton('载入报文样例','example')}<button type="submit" class="btn primary">提交并查看回执</button></div></form>`);
 }
@@ -534,7 +534,7 @@ async function catalogPlanEntry(code){
   if(code==='3.3.1')return;
   if(code==='3.3.3')return evidenceOpen();
   if(code==='3.1.1'){
-    if(!catWritable())return openModal('多源数据接入',workEmpty('当前岗位可查阅资源','数据管理员及评测负责人办理资料采集。'));
+    if(!catWritable())return openModal('多源数据接入',workEmpty('当前岗位可查阅资源','数据管理员办理资料采集。'));
     return openModal('多源数据接入',`<div class="actions">${workBtn('登记原文','resource-create','','primary')}<button type="button" class="btn" data-intake-action="open">批量采集</button>${catalogReceiptButton('接口采集','api')}</div>`);
   }
   catalogChooseVersion(code);

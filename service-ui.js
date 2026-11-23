@@ -5,8 +5,8 @@ const svcKind = {training:'训练集', benchmark:'评测集'};
 const svcEscape = value => escapeHtml(value ?? '');
 const svcId = value => `<span class="mono">${svcEscape(value || '—')}</span>`;
 const svcPath = (entity, id) => `/api/${entity}/${encodeURIComponent(id)}`;
-const svcWriter = () => workCan('operator', 'lead', 'admin');
-const svcPublisher = () => workCan('lead', 'admin');
+const svcWriter = () => workCan('operator');
+const svcCanRelease = kind => kind==='training' ? workCan('operator') : kind==='benchmark' && workCan('expert');
 const svcPublished = (items, kind) => items.filter(item => item.kind === kind && item.status === 'published');
 const svcVersionName = item => `${item.title} · ${item.version}`;
 const svcReady = item => item.status === 'draft' && item.sources?.length > 0 && item.sources.every(source => !source.issues.length);
@@ -31,7 +31,7 @@ function svcMetricText(value, signed = false) {
 async function renderServiceReleases() {
   const releases = await api('/api/releases');
   const controls = svcWriter()
-    ? workBtn('新建训练集版本','svc-release-new','training','primary','plus') + workBtn('新建评测集版本','svc-release-new','benchmark') + workBtn('交付视图与接口','svc-supply-views') : '';
+    ? workBtn('新建训练集版本','svc-release-new','training','primary','plus') + workBtn('交付视图与接口','svc-supply-views') : svcCanRelease('benchmark') ? workBtn('新建评测集版本','svc-release-new','benchmark','primary','plus') : '';
   const summary = `${releases.filter(item => item.status === 'draft').length} 个草稿 · ${releases.filter(item => item.status === 'published').length} 个已发布`;
   const body = releases.length ? workTable(['发布名称','类型','版本','状态','样本数','更新时间','操作'], releases.map(item => [
     svcTitle(item.title,item.id,'svc-release-view',item.id), svcEscape(svcKind[item.kind]), svcEscape(item.version),statusBadge(item.status),
@@ -43,7 +43,7 @@ async function renderServiceReleases() {
 }
 
 async function svcReleaseForm(kind, predecessor = null) {
-  if (!(kind in svcKind) || !svcWriter()) return;
+  if (!(kind in svcKind) || !svcCanRelease(kind)) return;
   const training = kind === 'training';
   const [versions, sources] = await Promise.all([api('/api/releases'), api(training ? '/api/batches' : '/api/benchmarks')]);
   const previous = svcPublished(versions,kind).filter(item => !versions.some(later => later.family === item.family && later.sequence > item.sequence));
@@ -67,9 +67,9 @@ async function svcReleaseForm(kind, predecessor = null) {
 }
 
 async function svcReleaseView(id) {
-  const [item, audit] = await Promise.all([api(svcPath('releases',id)), svcPublisher() ? api('/api/audit') : Promise.resolve([])]);
+  const [item, audit] = await Promise.all([api(svcPath('releases',id)), svcWriter() ? api('/api/audit') : Promise.resolve([])]);
   const deliveries = audit.filter(entry => entry.action === 'release.delivered' && entry.target === item.id);
-  const canFreeze = svcPublisher() && svcReady(item);
+  const canFreeze = svcCanRelease(item.kind) && svcReady(item);
   const deliverable = item.status === 'published' && svcWriter();
   const counts = item.formatCounts;
   const training = item.kind === 'training';
@@ -87,12 +87,12 @@ async function svcReleaseView(id) {
   openModal('数据版本详情',`<div class="stack"><div class="split"><div><h3>${svcEscape(item.title)}</h3><p class="muted">${svcId(item.id)}</p></div>${statusBadge(item.status)}</div>
     ${svcSummary([['类型',svcKind[item.kind]],['版本',item.version],['样本数',item.itemCount],['前一版本',item.previousId || '首版'],['创建人',item.owner],['发布时间',workTime(item.publishedAt)]])}
     <div class="document"><h3>版本来源</h3>${sources}${counts ? `<p>问答 ${svcEscape(counts.qa ?? 0)} 条 · CoT ${svcEscape(counts.cot ?? 0)} 条</p>`:''}${item.usage?`<p>交付用途 · ${svcEscape(item.usage)}</p>`:''}</div>
-    ${svcPublisher() && item.status === 'published' ? workPanel('近期交付记录',deliveries.length
+    ${svcWriter() && item.status === 'published' ? workPanel('近期交付记录',deliveries.length
       ? workTable(['接收方','登记人','时间'],deliveries.map(entry => [svcEscape(entry.detail),svcEscape(entry.actor),workTime(entry.at)]))
       : workEmpty('最近 100 条审计记录中无本版本交付')) : ''}
     <div class="actions">${canFreeze?workBtn('审批并冻结','svc-release-publish',item.id,'primary'):''}${deliverable?workBtn('登记交付','svc-release-deliver',item.id,'primary'):''}
       ${svcWriter() && (svcReady(item) || item.status === 'published') ? workBtn('版本对比','svc-release-compare',item.id) : ''}
-      ${item.nextId ? workBtn('查看后一版本','svc-release-view',item.nextId) : deliverable ? workBtn('续建版本','svc-release-next',item.id) : ''}</div></div>`);
+      ${item.nextId ? workBtn('查看后一版本','svc-release-view',item.nextId) : item.status==='published' && svcCanRelease(item.kind) ? workBtn('续建版本','svc-release-next',item.id) : ''}</div></div>`);
 }
 
 const svcChangeLabel = {added:'新增',removed:'移出',revised:'修订',unchanged:'沿用'};
@@ -130,8 +130,8 @@ async function svcReleaseCompare(id, filter = 'all', page = 0) {
 }
 
 async function svcReleasePublish(id) {
-  if (!svcPublisher()) return;
   const item = await api(svcPath('releases',id));
+  if (!svcCanRelease(item.kind)) return;
   if (!svcReady(item)) return svcReleaseView(id);
   openModal('审批并冻结版本',workModalForm('svc-release-publish',`<input type="hidden" name="id" value="${svcEscape(item.id)}"><div class="document"><strong>${svcEscape(svcVersionName(item))}</strong><p>发布后版本锁定，修改须新建版本。</p></div>`, '确认冻结并发布'));
 }
