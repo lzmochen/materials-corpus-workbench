@@ -1,31 +1,54 @@
 'use strict';
 
 const materialToolGroups=[
- ['文献与知识抽取',[
+ ['文献与知识抽取','extraction',[
    ['text','文本抽取','选择已核准原文，逐项定位材料名称、性能或工艺字段。','抽取'],
    ['paper','文献抽取','从论文和报告的解析段落中抽取字段，保留原文位置。','选文献'],
    ['custom','自定义属性抽取','定义本次任务的字段，先预览匹配证据。','配置字段'],
    ['structure','分子结构识别与核对','读取结构文件，或对照原始结构图核查识别结果。','读取结构'],
    ['reaction','反应抽取','从原文核对反应物、产物与反应证据。','抽取记录']]],
- ['合成路线与分子资料',[
+ ['合成路线与分子资料','routes',[
    ['single','单步逆合成路线','从目标产物反查已收录文献中的一步反应。','查前体'],
    ['multi','多步逆合成路线','沿有关联的反应记录展开上游原料，逐步查阅出处。','展开路线'],
    ['toStructure','文本转分子结构','本地结构库匹配；可核对外部模型生成的 SMILES。','查结构'],
    ['toText','分子描述生成','从收录的结构生成属性描述，或核对外部模型返回的描述。','生成描述'],
    ['screening','分子筛选结果核查','导入外部筛选输出，按指标过滤并留存模型和批次来源。','核查结果']]],
- ['分子理化计算',[
+ ['分子理化计算','properties',[
    ['mass','蛋白质与多肽分子量','从序列计算平均分子量，或核对 PDB 文件中的原子质量。','算分子量'],
    ['formula','多肽分子式','从一条未修饰线性肽序列统计元素组成。','算分子式'],
    ['pi','蛋白质等电点与分子量','从序列估算等电点，同时核对分子量。','估算等电点']]],
- ['模板与结果管理',[
+ ['模板与结果管理','records',[
    ['templates','抽取模板管理','查看模板字段与版本，编制或导入自定义模板。','查看模板'],
    ['verify','抽取结果校验','对照原文核查候选条目，记录改值或剔除的理由。','进入核查'],
    ['knowledge','已核准知识库','按属性、来源或关键词查找核准的抽取条目。','检索知识']]]
 ];
+const materialToolGlyphs = {
+  text: '<path d="M7 3H4v5m13-5h3v5M4 16v5h3m13-5v5h-3"/><path d="M8 8h8m-8 4h8m-8 4h5"/>',
+  paper: '<path class="tool-paper" d="M7 3h10l3 3v12H7z"/><path d="M3.5 7v14H16M16 3v4h4m-10 3h7m-7 4h5"/>',
+  custom: '<path d="M3 6h3m5 0h10M3 12h10m5 0h3M3 18h5m5 0h8"/><g class="tool-solid"><circle cx="8.5" cy="6" r="2"/><circle cx="15.5" cy="12" r="2"/><circle cx="10.5" cy="18" r="2"/></g>',
+  structure: '<path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4"/><path d="m7 10 5-3 5 3v5l-5 3-5-3zM9 11.3v2.6m4.5 1.8 1.6-.9"/>',
+  reaction: '<path class="tool-paper" d="M7 4v4l-4 9a1.5 1.5 0 0 0 1.4 2h9.2a1.5 1.5 0 0 0 1.4-2l-4-9V4Z"/><path d="M6 4h6M5 13h8m2-3h6m-3-3 3 3-3 3"/>',
+  single: '<path d="M16 12h-3a2 2 0 0 1-2-2V8a2 2 0 0 0-2-2H7m6 6a2 2 0 0 0-2 2v2a2 2 0 0 1-2 2H7"/><rect class="tool-solid" x="16" y="9.5" width="5" height="5" rx="1"/><circle cx="4.5" cy="6" r="2"/><circle cx="4.5" cy="18" r="2"/>',
+  multi: '<path d="M18 12h-2V8h-3m3 4v5h-3M9 8H7V4H5m2 4v4H5"/><rect class="tool-solid" x="18" y="10" width="4" height="4" rx=".8"/><circle cx="11" cy="8" r="1.8"/><circle cx="11" cy="17" r="1.8"/><circle cx="3.5" cy="4" r="1.5"/><circle cx="3.5" cy="12" r="1.5"/>',
+  toStructure: '<path d="M3 4h9M3 7h6M4 11v5h6m-2-2 2 2-2 2"/><path d="m14 11 3.5-2 3.5 2v4l-3.5 2-3.5-2zM17.5 17v3"/>',
+  toText: '<path d="m3 5.5 3.5-2 3.5 2v4l-3.5 2-3.5-2zM6.5 11.5V15"/><path d="M13 7h5v4m-2-2 2 2 2-2M10 15h11m-11 4h8"/>',
+  screening: '<path class="tool-paper" d="M3 4h18l-7 8v2.5l-4 2v-4.5z"/><path d="m14 18 2.3 2.3L21 15.5"/>',
+  mass: '<path d="M12 4v16m-5 1h10M3 7l17-2M6 7l-3 7h6L6 7Zm12-1-3 7h6l-3-7Z"/><path d="M3 14c.4 3 5.6 3 6 0m6-1c.4 3 5.6 3 6 0"/>',
+  formula: '<path d="M8.5 7a3.5 3.5 0 0 0-6 2.4v3.2a3.5 3.5 0 0 0 6 2.4M12 6v10m5-10v10m-5-5h5m2 5a1.7 1.7 0 1 1 3 1l-3 3h3"/>',
+  pi: '<path d="M4 3v17h17"/><path d="M5 11.5h15" stroke-dasharray="2 2"/><path d="M6 6c3.5 0 5 2.3 6.4 5.5S16 17 20 17"/><circle class="tool-solid" cx="12.4" cy="11.5" r="1.8"/>',
+  templates: '<rect class="tool-paper" x="3.5" y="4" width="17" height="16" rx="1.7"/><path d="M4 8.5h16M10 9v11m3-7.5h4m-4 4h3"/>',
+  verify: '<path class="tool-paper" d="M8 5H5v15h14V5h-3"/><rect x="8.5" y="3" width="7" height="4" rx="1"/><path d="m8.5 13 2.5 2.5 4.5-5"/>',
+  knowledge: '<ellipse class="tool-paper" cx="11" cy="5.5" rx="7.5" ry="3"/><path d="M3.5 5.5v11c0 1.8 3.4 3.1 7.5 3.1M18.5 5.5v5m-15 .3c0 1.8 3.4 3 7.5 3h1"/><path d="m14 17.5 2.3 2.4 5-5.4"/>',
+};
+
+function materialToolIcon(key) {
+  return '<span class="material-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false">'+materialToolGlyphs[key]+'</svg></span>';
+}
+
 function renderMaterialsTools(){
  const writer=workCan('operator');
- const shelves=materialToolGroups.map(([name,entries])=>'<section class="tools-shelf"><header><h2>'+name+'</h2></header>'+
- entries.map(([key,title,desc,action])=>'<article class="tool-row"><div><h3>'+title+'</h3><p>'+desc+'</p></div>'+
+ const shelves=materialToolGroups.map(([name,family,entries])=>'<section class="tools-shelf" data-tool-family="'+family+'"><header><h2>'+name+'</h2></header>'+
+ entries.map(([key,title,desc,action])=>'<article class="tool-row">'+materialToolIcon(key)+'<div class="material-tool-copy"><h3>'+title+'</h3><p>'+desc+'</p></div>'+
  (['text','paper','custom'].includes(key)&&!writer?'<span class="biz-role">数据管理员办理</span>':'<button type="button" class="btn" data-material-tool="'+key+'">'+action+'</button>')+'</article>').join('')+'</section>').join('');
  return sectionHead('','文献与分子工具','',workBtn('原文资源库','nav','resources')+workBtn('抽取任务列表','nav','extraction'))+'<div class="tools-groups">'+shelves+'</div>';
 }
