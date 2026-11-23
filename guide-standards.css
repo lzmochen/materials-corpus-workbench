@@ -1,0 +1,26 @@
+.gstd h3{margin:0 0 6px;color:#283e5f;font-size:15px}
+.gstd-tabs{display:flex;gap:3px;padding:3px;background:#eef2f8;align-self:flex-start;border-radius:8px}
+.gstd-tabs button{font:inherit;font-size:13px;border:0;background:transparent;padding:7px 13px;color:#5b6c83;border-radius:6px;cursor:pointer}
+.gstd-tabs button[aria-pressed=true]{background:#fff;color:var(--campus-blue);font-weight:650;box-shadow:0 1px 3px #253d661c}
+.gstd-metrics{display:grid;grid-template-columns:repeat(3,1fr);padding:15px 0;border-block:1px solid #dce5f1}
+.gstd-metrics>div{padding:0 16px;border-left:1px solid #e1e7f0}
+.gstd-metrics>div:first-child{padding-left:2px;border-left:0}
+.gstd-metrics span,.gstd-source,.gstd-notes small{color:#63748b;font-size:12px}
+.gstd-metrics strong{display:block;color:#223a64;font-size:24px;line-height:1.5;font-variant-numeric:tabular-nums}
+.gstd-metrics strong small{font-size:12px;font-weight:450;color:#63748b;margin-left:5px}
+.gstd-toolbar,.gstd-toolbar>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.gstd-toolbar{justify-content:space-between}
+.gstd-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gstd-facts{display:grid;grid-template-columns:minmax(92px,auto) 1fr;gap:0;margin:0;border-top:1px solid #e0e6ee}
+.gstd-facts>*{border-bottom:1px solid #e0e6ee;padding:10px;margin:0;white-space:pre-wrap;word-break:break-word}
+.gstd-facts dt{background:#f5f7fa;font-size:13px;color:#55667c}
+.gstd-example{font-size:11px;color:#64748a}
+.gstd-notes{display:grid;gap:8px;margin:7px 0;padding:0;list-style:none}
+.gstd-notes li{border:1px solid #e0e7f0;padding:10px 14px;border-radius:7px}
+.gstd-notes p,.gstd blockquote{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;margin:6px 0}
+.gstd-history summary{cursor:pointer;font-weight:600;color:#425c84}
+.gstd blockquote{border-left:3px solid #5376cf;background:#f1f5fa;padding:8px 12px}
+.gstd-status{color:#a52d38;font-size:13px}
+.gstd-status:empty,.gstd-source:empty{display:none}
+.gstd .table-wrap{max-width:100%}.gstd .table-wrap table{min-width:540px}
+@media(max-width:540px){.gstd-pair{grid-template-columns:1fr}.gstd-metrics>div{padding:0 8px}.gstd-facts{grid-template-columns:88px 1fr}}

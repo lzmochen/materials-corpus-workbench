@@ -1,0 +1,6 @@
+.dst-batches{border:1px solid #dce2ed;border-radius:8px;max-height:185px;overflow:auto;padding:6px 12px}
+.dst-batches legend{font-weight:600}.dst-batches label,.dst-check{display:flex;align-items:center;gap:10px;padding:6px 0}.dst-batches small,.dst-evidence small{display:block;color:#59677d}
+.dst-batches input,.dst-check input{width:16px;height:16px;accent-color:var(--campus-blue)}
+.dst-config{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dst-summary{display:flex;flex-wrap:wrap;gap:10px 18px;padding:12px 14px;background:#f0f4ff;border-radius:6px;color:#394f80}.dst-summary b{margin-left:4px}
+.dst-evidence{padding:10px;border:1px solid #dce2ed;border-radius:6px}.dst-evidence summary{cursor:pointer;font-weight:600}.dst-evidence blockquote{padding-left:12px;border-left:3px solid var(--campus-blue)}.dst-evidence p{white-space:pre-wrap}

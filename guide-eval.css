@@ -1,0 +1,36 @@
+#workspace-dialog:has(.ge-desk) {width:min(920px,95vw);}
+.ge-desk {color:#233856; min-width:0;}
+.ge-desk h3,.ge-desk h4,.ge-desk p {margin:0;}
+.ge-heading,.ge-footer,.ge-history {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.ge-heading span,.ge-footer>span,.ge-history small,.ge-hint,.ge-runs h3 span,.ge-source small {font-size:12px;color:var(--campus-steel);line-height:1.6;}
+.ge-set {display:grid;gap:8px;}
+.ge-question {border:1px solid #d5dfeb;border-radius:8px;background:#fff;min-width:0;}
+.ge-question>summary {display:flex;align-items:baseline;gap:9px;padding:13px;cursor:pointer;font-size:14px;list-style:none;}
+.ge-question>summary::after {content:'⌄';margin-left:auto;color:#4772ab;}
+.ge-question[open]>summary {background:#f3f7fd;border-bottom:1px solid #dbe4f0;}
+.ge-index {color:var(--campus-deep);font:600 12px ui-monospace,monospace;min-width:1.2em;}
+.ge-body {display:grid;gap:12px;padding:14px;overflow-wrap:anywhere;}
+.ge-pair,.ge-values,.ge-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.ge-values,.ge-metrics {grid-template-columns:repeat(3,minmax(0,1fr));}
+.ge-desk .field {min-width:0;}
+.ge-desk .field input,.ge-desk .field select,.ge-desk .field textarea {min-width:0;width:100%;}
+.ge-reference,.ge-source,.ge-result {padding:11px 13px;background:#f5f7fa;border:1px solid #e1e7ee;border-radius:6px;line-height:1.7;font-size:13px;white-space:pre-wrap;}
+.ge-reference strong,.ge-history strong,.ge-history small {display:block;}
+.ge-result {background:#fff;}
+.ge-result small {display:block;color:var(--campus-steel);border-top:1px solid #e0e8f4;margin-top:6px;padding-top:5px;}
+.ge-runs {display:grid;gap:8px;}
+.ge-runs h3 span {font-weight:500;margin-left:5px;}
+.ge-history {padding:9px 0;border-top:1px solid #e2e8f1;}
+.ge-metrics>div {padding:12px;border:1px solid #d8e2f0;border-top:3px solid var(--campus-deep);border-radius:6px;}
+.ge-metrics small {color:#566c84;}
+.ge-metrics p {font:600 16px ui-monospace,monospace;margin-top:9px;}
+.ge-metrics b,.ge-score {font-size:11px;color:#58718e;}
+.ge-score {white-space:nowrap;}
+.ge-desk [hidden] {display:none!important;}
+@media(max-width:620px) {
+.ge-pair,.ge-values {grid-template-columns:minmax(0,1fr);}
+.ge-metrics {grid-template-columns:1fr;}
+.ge-metrics>div {display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.ge-metrics p {margin:0 0 0 auto;}
+.ge-score {display:none;}
+}

@@ -1,0 +1,14 @@
+.gc-catalog-actions,.gc-sources,.gc-coverage-head,.gc-check{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gc-catalog-actions{justify-content:flex-end}.cat-tools{flex-wrap:wrap}.cat-tools .cat-search{min-width:min(235px,100%)}
+.gc-coverage-head{justify-content:space-between}.gc-coverage-head h3,.gc-pair-grid h3{margin:0;font-size:16px;color:#1c3153}.gc-coverage-head span,.gc-pair-list small,.gc-source-note span{color:#506581}
+.gc-coverage,.gc-pair-grid section{display:grid;gap:15px;min-width:0}.gc-coverage>.btn{justify-self:start}.gc-scroll{overflow:auto}
+.gc-scroll table{width:100%;border-collapse:collapse;text-align:left}.gc-scroll th,.gc-scroll td{padding:13px 8px;border-bottom:1px solid #dfe6ef;font-size:13px;white-space:nowrap}.gc-scroll th{color:#475b77}.gc-scroll thead{background:#f3f6fc}.gc-cell{color:#284684;font:inherit;background:var(--campus-tint);border:1px solid #cfddf2;border-radius:6px;cursor:pointer;padding:8px}.gc-cell:hover{border-color:var(--campus-blue)}.gc-cell span{color:#526887}
+.gc-source-note{display:grid;gap:4px;line-height:1.65}.gc-sources a{color:#2759a1;text-decoration:underline;text-underline-offset:3px}
+.gc-pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.gc-pair-grid section{padding:15px;background:#f8fafd;border:1px solid #dce5f0;border-radius:9px;align-content:start}.gc-pair-grid select{width:100%;min-width:0}
+.gc-pair-grid blockquote{margin:0;border-left:3px solid #7895cd;padding:10px 12px;color:#294361;background:white;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.gc-image{background:#edf1f6;border:1px solid #d8e1ef;display:grid;place-items:center;min-height:96px;overflow:hidden}.gc-image img{display:block;max-width:100%;max-height:340px;object-fit:contain}
+.gc-pair-list label{display:flex;align-items:start;gap:12px;padding:12px 4px;border-bottom:1px solid #dce5f0}.gc-pair-list strong,.gc-pair-list small{display:block;line-height:1.55}.gc-check input,.gc-pair-list input{accent-color:var(--campus-blue)}.gc-pair-list small{margin-top:3px}
+@media(max-width:750px){.cat-head{align-items:flex-start;flex-wrap:wrap}.gc-catalog-actions{justify-content:flex-start}.gc-catalog-actions .btn{padding:6px 8px}.cat-tools .cat-search{flex-basis:100%}}
+@media(max-width:590px){.gc-pair-grid{grid-template-columns:1fr}.cat-tools select{max-width:100%;flex:1;min-width:75px}}
+
+.gc-pair-row{display:flex;align-items:center;gap:12px;border-bottom:1px solid #dce5f0}.gc-pair-row label{flex:1;border:0}.gc-pair-row .btn{flex:none}

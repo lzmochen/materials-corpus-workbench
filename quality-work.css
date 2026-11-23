@@ -1,0 +1,15 @@
+.qw .qw-tabs{display:flex;gap:24px;padding:0 22px;border-bottom:1px solid #dce3ee;overflow:auto}
+.qw-tabs button{font:inherit;font-weight:650;color:#546175;white-space:nowrap;border:0;border-bottom:3px solid transparent;background:none;padding:16px 0 12px;cursor:pointer}
+.qw-tabs button[aria-pressed=true]{color:var(--campus-deep);border-color:var(--campus-blue)}
+.qw-body{padding:20px 22px}.qw-toolbar,.qw-heading,.qw-caption,.qw-source-line{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.qw-toolbar{align-items:flex-end;margin-bottom:20px}.qw-toolbar .field{min-width:175px}.qw-toolbar .field:first-child{flex:1}
+.qw-caption{align-items:baseline}.qw-caption strong{font-size:1.1rem}.qw-caption span,.qw-heading>span,.qw-source-line{color:#526177;font-size:.9rem}
+.qw-indicators{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-block:1px solid #dce3ee;margin:11px 0 18px}
+.qw-indicators.wide{grid-template-columns:repeat(4,minmax(0,1fr))}.qw-indicator{padding:12px 8px 12px 0;display:grid;gap:4px}
+.qw-indicator span{color:#536077;font-size:.9rem}.qw-indicator strong{font-size:1.45rem;font-variant-numeric:tabular-nums;color:#243753}.qw-indicator small{font-size:1rem;color:#657287;font-weight:500}
+.qw-heading{justify-content:space-between;margin-bottom:10px}.qw h3{margin:0}.qw .qw-source-line{gap:4px 18px;margin:-4px 0 16px}
+.qw-evidence-grid,.qw-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.qw-evidence{border-left:3px solid #7183ac;background:#f4f6fa;padding:12px 14px;overflow-wrap:anywhere}
+.qw-evidence pre{white-space:pre-wrap;font-size:.94rem}.qw-evidence h3{font-size:1rem}.qw-evidence p{margin:5px 0}
+.qw-confirm{display:flex;align-items:center;gap:8px}.qw .table-wrap b{font-weight:600}.qw .table-wrap td:last-child{white-space:nowrap}
+@media(max-width:750px){.qw-body{padding:14px}.qw .qw-tabs{padding:0 14px}.qw-indicators{grid-template-columns:repeat(3,1fr)}.qw-indicators.wide{grid-template-columns:repeat(2,1fr)}.qw-form-grid,.qw-evidence-grid{grid-template-columns:1fr}.qw-toolbar .field{min-width:0;width:100%}}

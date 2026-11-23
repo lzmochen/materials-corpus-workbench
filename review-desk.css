@@ -1,0 +1,90 @@
+/* Annotation queues and benchmark preparation share one directory and detail layout. */
+.rd-panel,.rd-template {
+  min-width:0;background:#fff;border:1px solid var(--campus-line);border-radius:9px;color:var(--campus-text);
+}
+.rd-list-head {display:flex;align-items:center;justify-content:space-between;padding:19px 23px 17px}
+.rd-list-head h2,.rd-template h2 {display:flex;align-items:center;gap:10px;margin:0;font-size:18px;line-height:1.45;font-weight:650;color:var(--campus-ink)}
+.rd-list-head h2 span {font-size:13px;line-height:1.6;min-width:22px;text-align:center;background:var(--campus-tint);border-radius:5px;padding:0 6px;font-variant-numeric:tabular-nums;color:var(--campus-text)}
+.rd-tabs {display:flex;align-items:center;gap:24px;padding:0 23px;overflow-x:auto;border-bottom:1px solid var(--campus-line-soft);scrollbar-width:thin}
+.rd-tabs button {display:inline-flex;align-items:center;gap:7px;white-space:nowrap;min-height:42px;padding:0 1px;background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--campus-text);font:inherit;font-size:14px;cursor:pointer}
+.rd-tabs button span {font-size:12px;font-variant-numeric:tabular-nums;color:var(--campus-muted)}
+.rd-tabs button[aria-pressed="true"] {color:var(--campus-blue);border-bottom-color:var(--campus-blue);font-weight:650}
+.rd-tabs button[aria-pressed="true"] span {color:inherit}
+.rd-filters {display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;min-width:0;padding:15px 23px}
+.rd-search {display:flex;align-items:center;gap:9px;width:min(320px,100%);height:38px;box-sizing:border-box;padding:0 12px;border:1px solid var(--campus-line);border-radius:6px;color:var(--campus-muted);background:#fff}
+.rd-search:focus-within {border-color:var(--campus-steel);outline:2px solid var(--campus-line)}
+.rd-search svg {flex:none;width:16px;height:16px}
+.rd-search input[type="search"] {min-width:0;width:100%;height:100%;padding:0;min-height:0;background:transparent;border:0;box-shadow:none;outline:none;font:inherit;font-size:14px;color:var(--campus-text)}
+.rd-search input::placeholder {color:var(--campus-muted)}
+.rd-more {position:relative}
+.rd-more summary {display:flex;align-items:center;gap:9px;padding:0 13px;border:1px solid var(--campus-line);border-radius:6px;min-height:38px;box-sizing:border-box;background:white;list-style:none;color:var(--campus-text);cursor:pointer;font-size:14px;line-height:1.3}
+.rd-more summary::-webkit-details-marker {display:none}
+.rd-more summary::after {content:'';width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin-top:-3px}
+.rd-more[open] summary {border-color:var(--campus-quiet)}
+.rd-more[open] summary::after {transform:rotate(225deg);margin-top:4px}
+.rd-more>div {position:absolute;z-index:4;top:calc(100% + 6px);left:0;min-width:240px;border:1px solid var(--campus-line);border-radius:6px;background:white;padding:13px;box-shadow:0 5px 20px #20323e16}
+.rd-more .cot-classify {display:grid;grid-template-columns:1fr;gap:9px;margin:0}
+.rd-more .field {font-size:13px;color:var(--campus-text)}
+.rd-more select {width:100%;font-size:14px;min-height:34px}
+.rd-text-link {padding:9px 0 2px;font:inherit;font-size:13px;color:var(--campus-blue);border:0;background:transparent;cursor:pointer}
+.rd-table-scroll {width:100%;overflow-x:auto}
+.rd-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;line-height:1.5}
+.rd-table th,.rd-table td {padding:13px 12px;border:0;border-bottom:1px solid var(--campus-line-soft);text-align:left;vertical-align:middle;font-weight:400}
+.rd-table th {color:var(--campus-muted);background:var(--campus-paper);font-size:13px;font-weight:550}
+.rd-table th:first-child,.rd-table td:first-child {padding-left:23px}
+.rd-table th:last-child,.rd-table td:last-child {padding-right:23px}
+.rd-table th:first-child {width:36%}
+[data-rd-directory="annotations"] .rd-table th:nth-child(2) {width:29%}
+[data-rd-directory="benchmarks"] .rd-table th:first-child,[data-rd-directory="blueprints"] .rd-table th:first-child {width:43%}
+[data-rd-directory="benchmarks"] .rd-table th:nth-child(2),[data-rd-directory="blueprints"] .rd-table th:nth-child(2) {width:10%}
+.rd-table td {color:var(--campus-text);overflow-wrap:anywhere}
+.rd-table tbody tr:hover {background:var(--campus-wash)}
+.rd-name {display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:4px 0;background:none;border:none;color:var(--campus-deep);line-height:1.5;font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.rd-name:hover,.rd-name:focus-visible,.rd-back:hover {color:var(--campus-deep);text-decoration:underline;text-underline-offset:3px}
+.rd-table .ex-badge {display:inline-flex;align-items:center;white-space:nowrap;font-size:12px;font-weight:550;border-radius:4px;padding:2px 8px}
+.rd-panel .ex-neutral {background:var(--campus-line-soft);color:var(--campus-text)}
+.rd-panel .ex-green,.rd-panel .ex-blue {background:var(--campus-tint);color:var(--campus-blue)}
+.rd-panel .ex-amber {background:#fff1d5;color:#85571a}
+.rd-pagination {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 23px;font-size:13px;color:var(--campus-muted)}
+.rd-pagination>div {display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.rd-pagination button,.rd-template .btn {color:var(--campus-steel);border:1px solid var(--campus-line);border-radius:5px;background:white;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
+.rd-pagination button:disabled {color:var(--campus-quiet);cursor:default;background:var(--campus-paper)}
+.rd-empty {padding:30px 15px;text-align:center;color:var(--campus-muted);font-size:14px}
+.rd-empty strong {color:var(--campus-text);font-weight:600}
+.rd-empty p {margin:7px 0 0}
+.rd-detail-nav {margin-bottom:10px}
+.rd-back {display:inline-flex;align-items:center;gap:7px;background:none;border:0;padding:5px 0;font:inherit;font-size:14px;color:var(--campus-steel);cursor:pointer}
+.rd-back span {font-size:25px;line-height:12px;padding-bottom:2px}
+.rd-detail {display:grid;min-width:0;gap:14px}
+.rd-detail .ex-panel,.bp .bp-section,.bp .bp-plan {border:1px solid var(--campus-line);background:white;box-shadow:none;border-radius:8px}
+.rd-detail .ex-review-form,.rd-detail .ex-context,.rd-detail .ex-evidence-card,.rd-detail .ex-static-step,.rd-detail .ex-criterion {background:var(--campus-wash);border-color:var(--campus-line)}
+.rd-detail .ex-context {border-left:2px solid var(--campus-line-strong)}
+.rd-detail .ex-stages li[aria-current="step"],.rd-detail .ex-step-nav button[aria-current="step"],.rd-detail .ex-item-nav button[aria-pressed="true"] {background:var(--campus-tint);border-color:var(--campus-line);color:var(--campus-deep)}
+.rd-detail .ex-step-nav button[aria-current="step"] b {background:var(--campus-blue);color:white}
+.rd-detail .ex-history summary,.rd-detail .ex-evidence-picker summary {color:var(--campus-steel)}
+.rd-detail .ex-history summary:before,.rd-detail .ex-evidence-picker summary:before {color:var(--campus-text)}
+.rd-template {display:flex;align-items:center;gap:16px;margin-bottom:15px;padding:20px 23px}
+.rd-template-icon {display:grid;place-items:center;align-self:flex-start;width:43px;height:43px;border-radius:10px;background:var(--campus-tint);color:var(--campus-blue)}
+.rd-template-icon svg {width:24px;height:24px}
+.rd-template h2 {font-size:16px}
+.rd-template p {margin:4px 0 0;color:var(--campus-muted);font-size:14px}
+.rd-template .btn {margin-left:auto;white-space:nowrap;min-height:35px;padding:6px 14px}
+@media(max-width:900px) {
+  .rd-table th:first-child {width:34%}
+  [data-rd-directory="annotations"] .rd-table th:nth-child(2) {width:27%}
+  .rd-table th,.rd-table td {padding-inline:8px}
+}
+@media(max-width:720px) {
+  .rd-tabs {gap:18px;padding-inline:15px}
+  .rd-list-head,.rd-filters,.rd-pagination,.rd-template {padding-inline:15px}
+  .rd-filters {gap:8px}
+  .rd-search {width:min(280px,65%);flex:1}
+  .rd-table th:first-child,.rd-table td:first-child {padding-left:15px}
+  .rd-table th:last-child,.rd-table td:last-child {padding-right:12px}
+  .rd-table th:first-child,[data-rd-directory] .rd-table th:first-child {width:55%}
+  .rd-table :is(th,td):nth-child(4),[data-rd-directory="annotations"] .rd-table :is(th,td):nth-child(2),
+  [data-rd-directory="benchmarks"] .rd-table :is(th,td):nth-child(2),[data-rd-directory="blueprints"] .rd-table :is(th,td):nth-child(2) {display:none}
+  .rd-more>div {left:auto;right:0;max-width:calc(100vw - 60px)}
+  .rd-template {gap:10px}
+  .rd-template p {font-size:13px}
+}
