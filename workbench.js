@@ -108,7 +108,32 @@ function workField(label,name,opts={}) {
   const {required=true,type='text',value='',placeholder='',max=160}=opts;
   return `<label class="field">${escapeHtml(label)}<input name="${name}" type="${type}" maxlength="${max}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}"${required?' required':''}></label>`;
 }
-function workShell() { wb('#app').innerHTML=platformShell(); }
+function workShell() {
+  if (wb('[data-work-opening]')) {
+    updateEntryNavigation();
+    return;
+  }
+  wb('#app').innerHTML=platformShell();
+}
+function updateEntryNavigation() {
+  const opening=wb('[data-work-opening]');
+  if (!opening) return;
+  const route=platformRoute(location.hash.slice(1));
+  const title=opening.querySelector('h1');
+  if (title) title.textContent=workPages[route][0];
+  const actions=opening.querySelector('.entry-actions');
+  if (actions) actions.hidden=route!=='home';
+  const group=platformModule(route)?.key||'home';
+  for (const link of opening.querySelectorAll('.p-nav a')) {
+    const current=link.hash==='#'+group;
+    link.classList.toggle('active',current);
+    if (current) link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+  }
+}
+function completeEntry() {
+  if (wb('[data-work-opening]')) wb('#app').innerHTML=platformShell();
+}
 function workLogin(message='') {
   window.workspaceUser=null;
   wb('#app').innerHTML=`<main class="login-layout"><div class="login-hero"><div><h1>材料语料<br>全生命周期管理平台</h1></div></div><div class="login-form-wrap"><div class="login-form"><span class="brand-logo">${workIcon('mark')}</span><h2>登录业务工作台</h2>${message?`<p class="form-error">${escapeHtml(message)}</p>`:''}
@@ -123,7 +148,10 @@ async function refresh() {
     benchmarks:renderBenchmarks, releases:renderServiceReleases,runs:renderServiceRuns,jobs:renderWorkJobs,audit:renderWorkAudit,accounts:renderWorkAccounts};
   try {
     const html=await views[route]();
-    if (revision===workView && wb('#content')) platformMount(route,html);
+    if (revision===workView && wb('#content')) {
+      completeEntry();
+      platformMount(route,html);
+    }
   } catch(error) {
     if (revision!==workView) return;
     if (error.status===401) {
@@ -132,6 +160,7 @@ async function refresh() {
       else workLogin('会话已过期，请重新登录。');
       return;
     }
+    completeEntry();
     wb('#content').innerHTML=sectionHead('',workPages[route][0],error.message,workBtn('重试','refresh'));
   }
 }
@@ -565,7 +594,10 @@ document.addEventListener('change',async event=>{
     if (el.id==='work-resource-version-picker') await resourceOpen(el.dataset.resource,el.value);
   } catch(error) {notify(error.message,'error');}
 });
-window.addEventListener('hashchange',()=>navigate(platformRoute(location.hash.slice(1))));
+window.addEventListener('hashchange',()=>{
+  if (window.workspaceUser) navigate(platformRoute(location.hash.slice(1)));
+  else updateEntryNavigation();
+});
 window.addEventListener('popstate',()=>{
   // A list and its record share a hash. Cross-module traversal triggers hashchange.
   if (isReviewDesk(window.workspacePage) && location.hash==='#'+window.workspacePage) void navigate(window.workspacePage);
@@ -576,10 +608,11 @@ function workConnectionError(message) {
 async function connectWorkbench() {
   try {
     window.workspaceUser=await api('/api/session');
-    await navigate(window.workspacePage);
+    await navigate(platformRoute(location.hash.slice(1)));
   } catch(error) {
     if (error.status===401 && !window.workspaceUser?.meeting) workLogin();
     else workConnectionError(error.message);
   }
 }
+updateEntryNavigation();
 connectWorkbench();

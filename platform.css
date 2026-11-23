@@ -154,7 +154,6 @@ body :focus-visible {outline:2px solid #4669d9;outline-offset:3px;}
 
 .public-help video{width:100%;border-radius:8px;background:#152439;aspect-ratio:16/9}.public-help p{margin:0}.public-help a{color:var(--campus-blue)}.public-help .primary{color:white}.public-help .actions{justify-content:flex-start}@media(max-width:850px){.p-help span{display:none}}
 
-.public-start-links{display:flex;flex-wrap:wrap;gap:.65rem 1.5rem;justify-content:center;padding:0 1rem;margin:0 auto 2rem}.public-start-links a{color:var(--campus-blue);text-underline-offset:3px}
 
 .p-tool-groups{display:grid;gap:0}
 .p-tool-groups section{padding:15px 0}

@@ -61,6 +61,4 @@
     }
     return jsonResponse(packet.status,packet.data);
   };
-  const status=document.querySelector('#app .initial-load');
-  if(status) status.textContent='正在打开材料语料工作台，首次访问需加载运行组件…';
 })();

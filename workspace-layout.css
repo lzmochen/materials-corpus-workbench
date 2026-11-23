@@ -211,3 +211,13 @@ body,.app.platform{background:var(--campus-paper);color:var(--ink)}
 .home-module-load span{white-space:nowrap}
 .home-module-load b{color:var(--campus-text);font-weight:650;font-variant-numeric:tabular-nums}
 @media(max-width:650px){.home-module-load{gap:2px 7px;font-size:12px}}
+
+[data-work-opening] a{text-decoration:none}
+[data-work-opening] .entry-route{display:none}
+[data-work-opening] .entry-route:target{display:inline}
+[data-work-opening]:has(.entry-route:target) .entry-default,
+[data-work-opening]:has(.entry-route:target) .entry-actions{display:none}
+.entry-progress{width:64px;height:4px;accent-color:var(--campus-blue)}
+.entry-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:18px 22px}
+.entry-links a{display:flex;align-items:center;min-height:48px;padding:10px 15px;border:1px solid var(--line);border-radius:6px;color:var(--campus-blue);font-weight:600}
+.entry-links a:hover,.entry-links a:focus-visible{background:var(--campus-tint)}
