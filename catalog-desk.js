@@ -34,7 +34,8 @@ function catDesk(){
     const count=key?workCatalog.filter(r=>r.split===key).length:workCatalog.length;
     return catButton(`<span>${label}</span><small>${count}</small>`,'split',key,'cat-scope',`aria-pressed="${key===workFilter.split}"`);
   }).join('');
-  const tools=`<details class="cat-menu"><summary class="cat-trigger">目录工具<i aria-hidden="true"></i></summary><div class="cat-popover"><button type="button" data-guide="coverage">${workIcon('chart')}专题覆盖</button><button type="button" data-gstd="library">${workIcon('sheets')}标准与成果台账</button>${catWritable()?'<button type="button" data-intake-action="history">'+workIcon('clock')+'采集记录</button>':''}</div></details>`;
+  const intakeTool=catWritable()?'<button type="button" data-catalog-plan="api">'+workIcon('rows')+'接口采集</button>':'';
+  const tools=`<details class="cat-menu"><summary class="cat-trigger">目录工具<i aria-hidden="true"></i></summary><div class="cat-popover">${intakeTool}<button type="button" data-guide="coverage">${workIcon('chart')}专题覆盖</button><button type="button" data-catalog-plan="assets">${workIcon('box')}资产发布台账</button><button type="button" data-gstd="library">${workIcon('sheets')}标准与成果台账</button>${catWritable()?'<button type="button" data-intake-action="history">'+workIcon('clock')+'采集记录</button>':''}</div></details>`;
   const registers=catWritable()? `<button class="btn" type="button" data-intake-action="open">批量采集</button>${workBtn('登记资源','resource-create','','primary','plus')}`:'';
   const filters=`<details class="cat-advanced"><summary class="cat-trigger">${platIcon('tools')}筛选条件<i aria-hidden="true"></i></summary>
     <div class="cat-filter-pop"><label>材料门类<select aria-label="材料门类筛选" data-cat-field="family">${workSelect([['','全部门类'],...guideOptions(families)],catCategory)}</select></label>
@@ -204,8 +205,12 @@ function catRenderResourceDetail(resource,version){
     if(resource.split==='train') actions+=workBtn('生成训练样本','batch-create',versionKey);
   }
   const meta=[['资源编号',id],['材料门类',guideFamily(resource)],['材料子类',resource.category],['语料专题',guideResourceTopic(resource)],['资料来源',resource.source],['数据用途',resource.split==='holdout'?'评测留出':'训练'],['使用许可',resource.license||'未登记']];
-  const tabs=[['evidence','原文与证据'],['metadata','资料信息'],['versions','版本与关联']];
-  const evidence=blocks.map(block=>`<details class="evidence-row"><summary><span class="mono">${escapeHtml(block.id)}</span><strong>${escapeHtml(block.location)}</strong><span>${escapeHtml(block.text.slice(0,70))}</span></summary><p>${escapeHtml(block.text)}</p>${block.fields?`<dl class="cat-block-fields">${Object.entries(block.fields).map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}</dd></div>`).join('')}</dl>`:''}</details>`).join('');
+  const tabs=[['evidence','原文与证据'],['clean','规范化'],['metadata','来源与权限'],['versions','版本与关联']];
+  const documentTool=block=>writable && version.status==='approved' && mrTextMatch(block.text).length
+    ? '<button type="button" class="btn small" data-material-block="'+escapeHtml(block.id)+'">提取本段反应记录</button>' : '';
+  const origin=version?.toolEvidence;
+  const originLink=origin?'<div class="cat-detail-actions"><button type="button" class="btn" data-material-origin="'+escapeHtml(origin.resourceId)+'" data-version="'+escapeHtml(origin.versionId)+'" data-block="'+escapeHtml(origin.blockId)+'">查看工具记录的原文证据</button></div>':'';
+  const evidence=blocks.map(block=>`<details class="evidence-row"><summary><span class="mono">${escapeHtml(block.id)}</span><strong>${escapeHtml(block.location)}</strong><span>${escapeHtml(block.text.slice(0,70))}</span></summary><p>${escapeHtml(block.text)}</p>${block.fields?`<dl class="cat-block-fields">${Object.entries(block.fields).map(([k,v])=>`<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}</dd></div>`).join('')}</dl>`:''}${documentTool(block)}</details>`).join('');
   openModal('资源详情',`<section class="cat-detail" data-resource-id="${escapeHtml(id)}" data-version-id="${escapeHtml(version?.id||'')}" data-parse-job="${escapeHtml(version?.status==='parsing'?version.jobId:'')}"><header class="cat-detail-header"><div><h3>${escapeHtml(resource.title)}</h3><span>${escapeHtml(guideFamily(resource))} · ${resource.split==='holdout'?'评测留出':'训练资源'}</span></div>${statusBadge(version?.status||resource.status)}</header>
     <div class="cat-detail-tabs" role="group" aria-label="资源详情视图">${tabs.map(([k,t])=>`<button type="button" data-cat-detail-tab="${k}" aria-pressed="${k==='evidence'}" aria-controls="cat-detail-${k}">${t}</button>`).join('')}</div>
     <section id="cat-detail-evidence"><header class="cat-document-head"><div><strong>${version?escapeHtml(version.filename):'暂无原文件'}</strong>${version?`<span>v${escapeHtml(version.number)} · ${blocks.length} 条证据${version.template?' · '+escapeHtml(workTemplateNames[version.template]||version.template):''}</span>`:''}</div>
@@ -213,9 +218,11 @@ function catRenderResourceDetail(resource,version){
     ${version?.error?`<p class="form-error">${escapeHtml(version.error)}</p>`:''}
     ${blocks.length?`<section class="evidence-list" aria-label="抽取证据">${evidence}</section>`:'<p class="cat-note" role="status">'+(version?.status==='parsing'?'正在解析原文件，完成后可核对原文并核准本版本。':'当前版本暂无解析证据。')+'</p>'}
     ${actions?`<div class="cat-detail-actions">${actions}</div>`:''}</section>
-    <section id="cat-detail-metadata" hidden><dl class="cat-detail-meta">${meta.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v||'—')}</dd></div>`).join('')}</dl>${guideSources(resource)}${writable?`<div class="cat-detail-actions"><button type="button" class="btn" data-guide="classify" data-value="${escapeHtml(id)}">编辑分类</button></div>`:''}</section>
+    <section id="cat-detail-clean" hidden><div data-catalog-receipt="clean"></div></section>
+    <section id="cat-detail-metadata" hidden><dl class="cat-detail-meta">${meta.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v||'—')}</dd></div>`).join('')}</dl>${guideSources(resource)}${originLink}<div data-catalog-receipt="metadata"></div>${writable?`<div class="cat-detail-actions"><button type="button" class="btn" data-guide="classify" data-value="${escapeHtml(id)}">编辑分类</button></div>`:''}</section>
     <section id="cat-detail-versions" hidden><label class="field">文件版本<select id="work-resource-version-picker" data-resource="${escapeHtml(id)}">${workSelect(resource.versions.map(v=>[v.id,`v${v.number} · ${v.filename} · ${workStatuses[v.status]?.[0]||v.status}`]),version?.id)}</select></label>
-    ${version?`<dl class="cat-detail-meta"><div><dt>文件校验值（SHA-256）</dt><dd class="mono">${escapeHtml(version.sha256||'—')}</dd></div></dl>`:''}<div class="cat-detail-actions">${resource.split==='train'&&version?workBtn('查看办理进度','resource-case-trail',versionKey):''}${catLineageButton(id,version?.id)}${writable?workBtn('登记新版本','resource-version',id):''}</div></section></section>`);
+    ${version?`<dl class="cat-detail-meta"><div><dt>文件校验值（SHA-256）</dt><dd class="mono">${escapeHtml(version.sha256||'—')}</dd></div></dl>`:''}<div class="cat-detail-actions">${resource.split==='train'&&version?workBtn('查看办理进度','resource-case-trail',versionKey):''}${catLineageButton(id,version?.id)}${writable?workBtn('登记新版本','resource-version',id):''}</div><div data-catalog-receipt="versions"></div></section></section>`);
+  detailCatalogSource={resource,version,owner:window.workspaceUser.username};
 }
 document.addEventListener('click',event=>{
   const tab=event.target.closest('[data-cat-detail-tab]');if(!tab)return;
@@ -225,6 +232,7 @@ document.addEventListener('click',event=>{
     btn.setAttribute('aria-pressed',String(selected));
     detail.querySelector('#'+btn.getAttribute('aria-controls')).hidden=!selected;
   }
+  if(tab.dataset.catDetailTab!=='evidence')loadCatalogReceipt(detail,tab.dataset.catDetailTab);
 });
 
 let catIntake=null;
@@ -461,4 +469,123 @@ document.addEventListener('click',async e=>{
       if(target){target.open=true;target.classList.add('cat-evidence-target');target.querySelector('summary')?.focus();target.scrollIntoView({block:'center'});}
     }
   }catch(error){notify(error.message,'error');}
+});
+
+let detailCatalogSource=null;
+const catalogReceiptButton=(label,action,primary=false)=>`<button type="button" class="btn ${primary?'primary':'small'}" data-catalog-plan="${action}">${label}</button>`;
+function catalogMeta(rows){
+  return '<dl class="cat-detail-meta">'+rows.map(([label,value])=>'<div><dt>'+escapeHtml(label)+'</dt><dd>'+escapeHtml(value??'—')+'</dd></div>').join('')+'</dl>';
+}
+function catalogReceiptPanel(part,source,receipt){
+  const {resource,version}=source;
+  if(part==='clean'){
+    const normal=receipt.normalized;
+    if(!normal.total)return '<p class="cat-note">该版本尚无规范化记录，请在「原文与证据」中查看解析状态。</p>';
+    const summary=catalogMeta([['证据记录',normal.total+' 条'],['原文字段',normal.fields+' 种'],['保有原文位置',normal.located+' 条']]);
+    const preview=normal.sample.map(row=>`<details class="evidence-row"><summary><strong>${escapeHtml(row.location)}</strong> ${escapeHtml(row.text.slice(0,65))}</summary><p>${escapeHtml(row.text)}</p></details>`).join('');
+    return `<header class="cat-document-head"><div><strong>规范化记录</strong><span>统一换行与首尾空白，保留原有数值、单位和原文位置。</span></div></header>${summary}<div class="evidence-list">${preview}</div><div class="cat-detail-actions"><span class="cat-note">预览前 ${normal.sample.length} 条</span>${receipt.canExport?catalogReceiptButton('导出规范化 JSONL','export'):''}</div>`;
+  }
+  if(part==='metadata'){
+    const owner=window.workspaceUser;
+    const ledger=receipt.batches.map(b=>b.id+' · 第 '+b.number+' 行'+(b.status==='reused'?'（原件已归档）':'')).join('、');
+    return catalogMeta([['接入方式',receipt.channel],['登记时间',workTime(version.createdAt)],['登记人',version.createdBy],...(ledger?[['关联采集批次',ledger]]:[]),['文件校验值（SHA-256）',version.sha256],['当前岗位',workRoles[owner.role]||owner.display],['原文读取',resource.split==='holdout'?'仅数据管理员、评审专家和评测负责人可读':'训练原文可读'],['规范化导出',receipt.canExport?'允许导出本版本':catWritable()?'原文核准后可导出':'当前岗位无导出权限'],['语料交付','由数据管理员或评测负责人登记冻结版本的接收方']]);
+  }
+  const assets=receipt.releases;
+  return '<h4>收录本版本的已发布数据集</h4>'+(assets.length?workTable(['数据集版本','类型','收录条目'],assets.map(item=>[
+    workBtn(escapeHtml(item.title)+' · '+escapeHtml(item.version),'svc-release-view',item.id,'small link'),
+    item.kind==='training'?'训练集':'评测集',String(item.itemCount)])):'<p class="cat-note">本原文版本尚未收录到已发布数据集。</p>')+'<div class="cat-detail-actions">'+catalogReceiptButton('查看资产发布台账','assets')+'</div>';
+}
+async function loadCatalogReceipt(detail,part){
+  const box=detail.querySelector('[data-catalog-receipt="'+part+'"]');
+  const source=detailCatalogSource;
+  if(!source?.version||!box||source.owner!==window.workspaceUser?.username)return;
+  const {resource,version}=source;
+  box.textContent='正在读取版本记录…';
+  try{
+    source.pending??=api('/api/resources/'+encodeURIComponent(resource.id)+'/versions/'+encodeURIComponent(version.id)+'/catalog-receipt');
+    const receipt=await source.pending;
+    if(detail.isConnected&&source===detailCatalogSource&&source.owner===window.workspaceUser?.username)box.innerHTML=catalogReceiptPanel(part,source,receipt);
+  }catch(error){
+    source.pending=null;
+    if(box.isConnected)box.textContent=error.message;
+  }
+}
+function catalogApiForm(){
+  if(!catWritable())throw new Error('请切换至数据管理员或评测负责人办理采集。');
+  const native=![...document.scripts].some(s=>s.src.includes('browser-bridge.js'));
+  openModal('接口采集',`<form class="stack" data-catalog-api><div class="document"><h3>结构化数据接入</h3><code>POST /api/catalog-intake</code><p>${native?'外部系统通过已授权的会话逐批提交报文，使用同一请求编号可检查并重试同一批次。':'在本浏览器导入业务系统导出的 JSON 报文。面向外部系统的持续推送需接入服务端部署。'}</p></div><label class="field">导入 JSON 报文<input type="file" accept=".json,application/json" data-catalog-payload></label><label class="field">请求内容<textarea name="payload" rows="9" required placeholder="填入来源、权属、请求编号和试验记录"></textarea></label><p class="form-error" role="alert" data-catalog-error></p><div class="actions">${catalogReceiptButton('载入报文样例','example')}<button type="submit" class="btn primary">提交并查看回执</button></div></form>`);
+}
+const catalogApiExample=()=>({
+  requestId:'thermal-'+Date.now(),title:'导热性能接口样例',materialFamily:'无机非金属材料',category:'氧化物陶瓷',topic:'科学计算',
+  split:'train',source:'接口格式样例',license:'样例数据，限流程验证',
+  records:[{'试样':'TH-01','检测温度(℃)':25,'导热系数(W/m·K)':24.1},{'试样':'TH-02','检测温度(℃)':25,'导热系数(W/m·K)':23.8}]
+});
+function catalogChooseVersion(code){
+  const labels={'3.1.2':'格式统一与清洗','3.1.3':'元数据与来源记录','3.3.2':'权限与安全控制','3.3.4':'语料溯源与血缘管理'};
+  const rows=workCatalog.filter(catAccessible).flatMap(r=>r.versions.map(v=>[r.id+'|'+v.id,`${r.title} · v${v.number} · ${workStatuses[v.status]?.[0]||v.status}`]));
+  const valid=code==='3.1.2'?rows.filter(([key])=>{const [rid,vid]=key.split('|');return workCatalog.find(r=>r.id===rid)?.versions.find(v=>v.id===vid)?.blockCount>0;}):rows;
+  openModal(labels[code],valid.length?`<form class="stack" data-catalog-choose="${code}"><label class="field">资源及文件版本<select name="selection" required>${workSelect(valid,valid[0][0])}</select></label><div class="actions"><button class="btn primary" type="submit">查看本版本</button></div></form>`:workEmpty('当前无符合条件的文件版本',code==='3.1.2'?'请先登记并解析原文。':'请先在资源目录登记资料。'));
+}
+async function catalogPlanEntry(code){
+  if(code==='3.3.5'){closeModal();return navigate('releases');}
+  const owner=window.workspaceUser.username;
+  if(window.workspacePage!=='resources')await navigate('resources');
+  if(window.workspaceUser.username!==owner||window.workspacePage!=='resources')return;
+  if(code==='3.3.1')return;
+  if(code==='3.3.3')return evidenceOpen();
+  if(code==='3.1.1'){
+    if(!catWritable())return openModal('多源数据接入',workEmpty('当前岗位可查阅资源','数据管理员及评测负责人办理资料采集。'));
+    return openModal('多源数据接入',`<div class="actions">${workBtn('登记原文','resource-create','','primary')}<button type="button" class="btn" data-intake-action="open">批量采集</button>${catalogReceiptButton('接口采集','api')}</div>`);
+  }
+  catalogChooseVersion(code);
+}
+document.addEventListener('change',async event=>{
+  const field=event.target.closest('[data-catalog-payload]');if(!field?.files[0])return;
+  const form=field.form, error=form.querySelector('[data-catalog-error]');
+  try{
+    if(field.files[0].size>8*1024*1024)throw new Error('单份接口报文上限为 8 MiB。');
+    form.elements.payload.value=await field.files[0].text();error.textContent='';
+  }catch(e){error.textContent=e.message;}
+});
+document.addEventListener('submit',async event=>{
+  const form=event.target.closest('[data-catalog-api],[data-catalog-choose]');if(!form)return;
+  event.preventDefault();
+  const owner=window.workspaceUser.username;
+  if(form.hasAttribute('data-catalog-choose')){
+    const [id,version]=form.elements.selection.value.split('|');
+    const code=form.dataset.catalogChoose;
+    try{
+      if(code==='3.3.4')return await openResourceLineage(id,version);
+      await resourceOpen(id,version);
+      if(owner===window.workspaceUser?.username)wb('[data-cat-detail-tab="'+(code==='3.1.2'?'clean':'metadata')+'"]')?.click();
+    }catch(err){notify(err.message,'error');}
+    return;
+  }
+  const button=form.querySelector('[type="submit"]'),error=form.querySelector('[data-catalog-error]');
+  button.disabled=true;error.textContent='';
+  try{
+    let value;
+    try{value=JSON.parse(form.elements.payload.value);}catch{throw new Error('请检查 JSON 括号、引号和逗号。');}
+    if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('请求内容须为含 records 数组的对象。');
+    const result=await api('/api/catalog-intake','POST',value);
+    if(!form.isConnected||owner!==window.workspaceUser?.username)return;
+    await refresh();
+    if(owner!==window.workspaceUser?.username)return;
+    openModal('接口采集回执',catalogMeta([['采集批次',result.receiptId],['原文版本',result.versionId],['接入记录',result.recordCount+' 条'],['处理结果',result.status==='reused'?'已关联相同来源的原文件':'登记成功'],['SHA-256',result.sha256]])+'<div class="actions">'+workBtn('打开入库原文','resource-open',result.resourceId,'primary')+'</div>');
+  }catch(err){if(form.isConnected)error.textContent=err.message;}finally{button.disabled=false;}
+});
+document.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-catalog-plan]');if(!button)return;
+  try{
+    const action=button.dataset.catalogPlan;
+    if(action==='api')return catalogApiForm();
+    if(action==='assets')return await catalogPlanEntry('3.3.5');
+    if(action==='example'){const form=button.closest('form');form.elements.payload.value=JSON.stringify(catalogApiExample(),null,2);return;}
+    if(action==='export'&&detailCatalogSource?.version){
+      button.disabled=true;
+      const source=detailCatalogSource;
+      const result=await api('/api/resources/'+encodeURIComponent(source.resource.id)+'/versions/'+encodeURIComponent(source.version.id)+'/normalized-export','POST',{});
+      if(source===detailCatalogSource&&source.owner===window.workspaceUser.username&&button.isConnected)workDownload(result.filename,new Blob([result.content],{type:'application/x-ndjson;charset=utf-8'}));
+    }
+  }catch(err){notify(err.message,'error');}finally{button.disabled=false;}
 });

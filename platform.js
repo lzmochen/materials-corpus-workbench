@@ -2,9 +2,9 @@
 
 const platformModules = [
   {key:'resources', title:'训练资源目录构建与统一管理', label:'训练资源目录', icon:'archive', routes:['resources','jobs']},
-  {key:'generation', title:'高质量训练数据生成与语料蒸馏', label:'数据生成与蒸馏', icon:'layers', routes:['generation','batches','batch-record','extraction','pipeline-work','quality-work','releases','runs']},
+  {key:'generation', title:'高质量训练数据生成与语料蒸馏', label:'数据生成与蒸馏', icon:'layers', routes:['generation','batches','batch-record','extraction','pipeline-work','quality-work','releases','runs','materials-tools']},
   {key:'annotations', title:'领域专业思维链（CoT）精细化标注', label:'CoT 精细标注', icon:'nodes', routes:['annotations']},
-  {key:'benchmarks', title:'专家在环（HITL）大模型评测基准构建系统', label:'HITL 评测基准', icon:'score', routes:['benchmarks','benchmark-work']}
+  {key:'benchmarks', title:'专家在环（HITL）大模型评测基准构建系统', label:'HITL 评测基准', icon:'score', routes:['benchmarks','benchmark-work','evaluation-desk']}
 ];
 const platformIcons = {
   calendar:'<rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M7 3v5m10-5v5M4 11h16"/>',
@@ -45,7 +45,7 @@ function platformShell() {
     <button class="p-tool p-help" type="button" data-public-help aria-label="使用帮助">${platIcon('book')}<span>使用帮助</span></button>
     <button class="p-tool" type="button" data-action="platform-inbox" aria-label="岗位待办">${platIcon('inbox')}<span>待办</span></button>
     <button class="p-tool p-settings" type="button" data-action="platform-tools" aria-label="业务工具" title="业务工具">${platIcon('tools')}</button>${role}</div></div></header>
-    <nav class="p-nav" aria-label="业务导航"><div class="p-nav-inner">${routes.map(m=>{const active=chosen?.key===m.key || route===m.key || (['workflow','research','crystal'].includes(route) && m.key==='home');return `<button type="button" class="p-tab ${active?'active':''}" data-action="nav" data-id="${m.key}" title="${m.title}" ${active?'aria-current="page"':''}>${platIcon(m.icon)}<span>${m.label}</span></button>`;}).join('')}</div></nav>
+    <nav class="p-nav" aria-label="业务导航"><div class="p-nav-inner">${routes.map(m=>{const active=chosen?.key===m.key || route===m.key || (['workflow','research','crystal','function-index'].includes(route) && m.key==='home');return `<button type="button" class="p-tab ${active?'active':''}" data-action="nav" data-id="${m.key}" title="${m.title}" ${active?'aria-current="page"':''}>${platIcon(m.icon)}<span>${m.label}</span></button>`;}).join('')}</div></nav>
     <main id="content" class="content p-content" tabindex="-1"><div class="initial-load" role="status">正在读取业务记录…</div></main></div>`;
 }
 const resourceStatePalette = [
@@ -112,7 +112,7 @@ function platformMount(route,html) {
   const mod=platformModule(route);
   let title=workPages[route][0], secondary='';
   if(mod && route===mod.key) title=mod.label;
-  const sections = mod?.key === 'benchmarks' ? [['benchmark-work','基准设计与制备'],['benchmarks','基准评审与发布']] : [];
+  const sections = mod?.key === 'benchmarks' ? [['benchmark-work','基准设计与制备'],['benchmarks','基准评审与发布'],['evaluation-desk','评测指标与增益']] : [];
   if(sections.length) {
     secondary=`<nav class="p-subnav" aria-label="${escapeHtml(mod.label)}业务导航">${sections.map(([id,label])=>`<button type="button" class="${id===route?'active':''}" data-action="nav" data-id="${id}" ${id===route?'aria-current="page"':''}>${label}</button>`).join('')}</nav>`;
   }

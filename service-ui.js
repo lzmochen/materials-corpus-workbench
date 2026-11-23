@@ -31,7 +31,7 @@ function svcMetricText(value, signed = false) {
 async function renderServiceReleases() {
   const releases = await api('/api/releases');
   const controls = svcWriter()
-    ? workBtn('新建训练集版本','svc-release-new','training','primary','plus') + workBtn('新建评测集版本','svc-release-new','benchmark') : '';
+    ? workBtn('新建训练集版本','svc-release-new','training','primary','plus') + workBtn('新建评测集版本','svc-release-new','benchmark') + workBtn('交付视图与接口','svc-supply-views') : '';
   const summary = `${releases.filter(item => item.status === 'draft').length} 个草稿 · ${releases.filter(item => item.status === 'published').length} 个已发布`;
   const body = releases.length ? workTable(['发布名称','类型','版本','状态','样本数','更新时间','操作'], releases.map(item => [
     svcTitle(item.title,item.id,'svc-release-view',item.id), svcEscape(svcKind[item.kind]), svcEscape(item.version),statusBadge(item.status),
@@ -153,7 +153,7 @@ async function renderServiceRuns() {
       `${Object.keys(item.metrics || {}).length} 项指标${item.baselineId ? '<small class="cell-note muted">已绑定基线</small>' : ''}`,
       workBtn('查看','svc-run-view',item.id,'small') + (svcWriter() && ['registered','running'].includes(item.status) ? workBtn('更新结果','svc-run-report',item.id,'small link') : '')];
   })) : workEmpty('暂无外部训练任务');
-  return `${sectionHead('','外部训练任务','',svcWriter()?workBtn('登记外部任务','svc-run-create','','primary','plus'):'')}
+  return `${sectionHead('','外部训练任务','',svcWriter()?workBtn('登记外部任务','svc-run-create','','primary','plus')+workBtn('模型联调与资源配额','svc-supply-models')+workBtn('服务审计','svc-supply-monitor'):'')}
     ${workPanel('训练任务台账',items,`<span class="muted">${runs.length} 项任务 · ${completed} 项已完成</span>`)}`;
 }
 
@@ -169,6 +169,8 @@ async function svcRunForm() {
   const evalAndBaseline = benchmarks.flatMap(item => [[`${item.id}|`,`${svcVersionName(item)} · 无基线`],...runs.filter(run => run.status === 'completed' && run.benchmarkReleaseId === item.id).map(run => [`${item.id}|${run.id}`,`${svcVersionName(item)} · 基线 ${run.title}`])]);
   openModal('登记外部训练任务',workModalForm('svc-run-create',`${workField('任务名称','title',{max:120})}
     <div class="grid-2">${workField('外部任务编号','externalId',{max:120,placeholder:'训练环境生成的任务 ID'})}${workField('训练环境','framework',{max:120})}</div>
+    <div class="grid-2">${workField('所属项目','project',{max:120})}${workField('任务责任人','responsible',{max:120,value:window.workspaceUser.display})}</div>
+    <div class="grid-2">${workField('训练用途','purpose',{max:300})}<label class="field">计划结束日期<input type="date" name="plannedUntil"></label></div>
     ${workField('模型或底座版本','model',{max:120})}${svcSelect('训练数据版本','releaseId',training.map(item => [item.id,svcVersionName(item)]))}${svcSelect('评测数据版本与基线','benchmarkBaseline',evalAndBaseline)}
     <label class="field">实验配置<textarea name="config" rows="3" maxlength="500" placeholder="训练参数、代码版本、随机种子"></textarea><small>基线须使用相同的评测版本、训练环境、底座和配置。</small></label>`, '登记任务'));
 }
@@ -180,7 +182,7 @@ async function svcRunView(id) {
   const benchmark = releases.find(release => release.id === item.benchmarkReleaseId);
   const metricRows = Object.entries(item.metrics || {}).map(([name,value]) => [svcEscape(name),svcMetricText(value),svcMetricText(baseline?.metrics?.[name]),svcMetricText(item.deltas?.[name],true)]);
   openModal('外部训练任务详情',`<div class="stack"><div class="split"><div><h3>${svcEscape(item.title)}</h3><p class="muted">${svcId(item.id)}</p></div>${statusBadge(item.status)}</div>
-    ${svcSummary([['外部任务编号',item.externalId],['训练环境',item.framework],['模型或底座',item.model],['基线任务',baseline?.title],['训练数据版本',train ? svcVersionName(train) : item.releaseId],['评测数据版本',benchmark ? svcVersionName(benchmark) : item.benchmarkReleaseId]])}
+    ${svcSummary([['所属项目',item.project],['任务责任人',item.responsible || item.owner],['训练用途',item.purpose],['计划结束日期',item.plannedUntil],['外部任务编号',item.externalId],['训练环境',item.framework],['模型或底座',item.model],['基线任务',baseline?.title],['训练数据版本',train ? svcVersionName(train) : item.releaseId],['评测数据版本',benchmark ? svcVersionName(benchmark) : item.benchmarkReleaseId]])}
     ${item.config ? `<div class="document"><h3>实验配置</h3><p>${svcEscape(item.config)}</p></div>`:''}
     ${workPanel('评测指标与基线差值',metricRows.length ? workTable(['指标','本次','基线','本次减基线'],metricRows):workEmpty('暂无实测指标'))}
     ${item.note?`<div class="document"><h3>结果说明</h3><p>${svcEscape(item.note)}</p></div>`:''}
@@ -206,6 +208,7 @@ async function openRunRecord(id) {
 }
 
 async function serviceUiAction(action, el) {
+  if (action.startsWith('svc-supply-')) return supplyAction(action.slice(11),el);
   const id=el.dataset.id;
   switch(action) {
     case 'svc-release-new': await svcReleaseForm(id); break;
@@ -241,6 +244,7 @@ async function serviceUiAction(action, el) {
 }
 
 async function serviceUiSubmit(form) {
+  if (form.dataset.form.startsWith('svc-supply-')) return supplySubmit(form);
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
   switch (form.dataset.form) {

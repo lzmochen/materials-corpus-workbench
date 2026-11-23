@@ -61,7 +61,7 @@ function pipeContent(r,bySample){
   if(t)actions.push(workBtn('打开完整核查记录','home-extraction',t.id,'small'));
   const controls=tabs.map(([key,label])=>'<button type="button" data-pipe="tab" data-id="'+key+'" aria-pressed="'+(pipeUi.tab===key)+'">'+escapeHtml(label)+'</button>').join('');
   return '<article class="pw-sheet"><header class="pw-sheet-head"><div><div class="pw-run-mode">'+escapeHtml(pipeRecipes[r.recipe])+'</div><h2>'+escapeHtml(r.title)+'</h2></div>'+pipeBadge(r.state)+'</header>'
-    +'<div class="pw-context"><span>'+escapeHtml(r.source.filename)+' · V'+escapeHtml(r.source.number)+'</span><span>经办人 '+escapeHtml(r.createdBy)+'</span><span>更新于 '+workTime(r.updatedAt)+'</span></div>'
+    +'<div class="pw-context">'+(r.workflow?'<span>加工方案 '+escapeHtml(r.workflow.title)+' · V'+Number(r.workflow.revision)+'</span>':'')+'<span>'+escapeHtml(r.source.filename)+' · V'+escapeHtml(r.source.number)+'</span><span>经办人 '+escapeHtml(r.createdBy)+'</span><span>更新于 '+workTime(r.updatedAt)+'</span></div>'
     +pipeSteps(r)+(r.state==='failed'?'<p class="form-error">'+escapeHtml(b.error||r.job?.error||'合成任务执行失败')+'</p>':'')
     +'<div class="pw-actions">'+actions.join('')+'</div><div class="pw-tabs" aria-label="运行明细">'+controls+'</div><div class="pw-detail">'+(pipeUi.tab==='knowledge'?pipeKnowledge(r):pipeUi.tab==='samples'?pipeSamples(r,bySample):pipeSource(r))+'</div></article>';
 }

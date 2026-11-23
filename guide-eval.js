@@ -37,7 +37,7 @@ function evalQuestionForm(item, number, topics) {
 }
 
 async function evalOpen(id, ticket = '', focus = '') {
-  const [config,desk] = await Promise.all([api(evalRunUrl(id)),ticket ? api(evalRegressionUrl(ticket)) : null]);
+  const [config,desk,library] = await Promise.all([api(evalRunUrl(id)),ticket ? api(evalRegressionUrl(ticket)) : null,api(metricProfilesPath)]);
   if (desk && (desk.benchmarkId !== id || desk.itemId !== focus)) throw new Error('工单与当前评测题不匹配。');
   const assigned = config.items.find(q=>q.itemId === focus);
   if (assigned && desk?.rule) assigned.rule = desk.rule;
@@ -49,6 +49,7 @@ async function evalOpen(id, ticket = '', focus = '') {
       ${exButton('查看报告','evaluation-report',run.id,{extra:` data-benchmark-id="${exText(id)}"`})}</div>`).join('');
   const form = config.canRun && config.items.length ? `<form class="stack" data-form="ex-evaluation-run" data-id="${exText(id)}" data-ticket="${exText(ticket)}" data-revision="${exText(config.revision)}">
     <label class="field">评测名称<input name="title" required maxlength="120" value="${exText(title)}"></label>
+    <label class="field">评测指标版本<select required name="profileId">${workSelect(library.profiles.filter(p=>p.status==='published').map(p=>[p.id,profileName(p)]),config.profileId || 'PROFILE-MATERIALS-V1')}</select></label>
     <div class="ge-set">${ordered.map((item, i) => evalQuestionForm(item, i, config.topics)).join('')}</div>
     <div class="ge-footer"><span>共 ${config.items.length} 题 · 每题 2 份作答</span><button type="submit" class="btn primary">运行并保存报告</button></div></form>` : '';
   openModal('多维自动评测',`<div class="ge-desk stack"><div class="ge-heading"><h3>${exText(config.benchmarkTitle)}</h3><span>独立留出基准</span></div>
@@ -92,7 +93,7 @@ async function evalSubmit(form) {
     }
   }
   const run = await api(evalRunUrl(form.dataset.id),'POST',{
-    title:form.elements.title.value.trim(), revision:form.dataset.revision, items
+    title:form.elements.title.value.trim(), revision:form.dataset.revision, profileId:form.elements.profileId.value, items
   });
   evalReport(run,form.dataset.ticket);
 }
@@ -105,7 +106,7 @@ function evalRuleDescription(rule) {
 
 function evalReport(run, ticket = '') {
   const metrics = run.dimensions.map(d=>
-    `<div><h4>${exText(d.topic)}</h4><small>${d.count} 题</small>${d.count ?
+    `<div><h4>${exText(d.topic)}</h4><small>${d.count} 题${run.profile?' · 权重 '+run.profile.weights[d.topic]+'%':''}</small>${d.count ?
        `<p><b>A</b> ${d.means[0]} <b>B</b> ${d.means[1]}</p>` : '<p>暂无该专题题目</p>'}</div>`).join('');
   const rows = run.items.map((item,i)=>
     `<details class="ge-question"><summary><span class="ge-index">${i+1}</span><strong>${exText(item.question)}</strong>
@@ -119,6 +120,7 @@ function evalReport(run, ticket = '') {
        <div>${exButton('查看原题与人工评审','evaluation-item',item.itemId,{extra:` data-benchmark-id="${exText(run.benchmarkId)}"`})}</div></div></details>`).join('');
   openModal('自动评测报告',`<div class="ge-desk stack"><div class="ge-heading"><h3>${exText(run.title)}</h3><span>${exText(run.engine)}</span></div>
     <p class="ge-hint">${exText(run.benchmarkTitle)} · ${exText(exDate(run.createdAt))} · ${exText(run.createdBy)}</p>
+    ${run.profile ? `<section class="ge-runs"><h3>${exText(profileName(run.profile))}</h3><p>已覆盖权重 ${run.aggregate.coveredWeight}% · 通过线 ${run.profile.threshold} 分</p><p>${run.aggregate.means ? run.aggregate.means.map((v,i)=>'候选 '+(i?'B':'A')+'　'+v+' 分（'+(run.aggregate.pass[i]?'通过':'未通过')+'）').join('　') : '部分能力域缺题，本次保留分项成绩。'}</p></section>` : '<p>历史报告按逐题规则计分。</p>'}
     <section class="ge-runs"><h3>专题平均规则分 <span>满分 100</span></h3><div class="ge-metrics">${metrics}</div></section>
     <section class="ge-set">${rows}</section>
     <div class="ge-footer">${ticket ? exButton('返回工单复验','feedback-regression',ticket) : exButton('返回评测配置','evaluation-open',run.benchmarkId)}${exButton('导出报告 JSON','evaluation-export',run.id,{extra:` data-benchmark-id="${exText(run.benchmarkId)}"`})}</div></div>`);
@@ -157,7 +159,7 @@ async function evalRegressionReview(id,before,after,file = false) {
   const archive = data.canFile && !data.filed ? exButton('归档复验','feedback-regression-file',id,{primary:true,extra:evalPairAttrs(before,after)}) : '';
   openModal('同题回归复验',`<div class="ge-desk stack"><div class="ge-heading"><h3>${exText(c.question)}</h3><span>${exText(c.benchmarkVersion)}</span></div>
     <p class="ge-reference"><strong>参考答案</strong>${exText(c.reference)}</p><section class="ge-runs"><h3>评测依据</h3>${details}
-      <p>${exText(c.rule.topic)} · ${exText(evalRuleDescription(c.rule))} · ${exText(c.engine)}</p></section>${comparisons}
+      <p>${exText(c.rule.topic)} · ${exText(evalRuleDescription(c.rule))} · ${exText(c.engine)} · ${c.profile?exText(profileName(c.profile)):'历史逐题规则'}</p></section>${comparisons}
     <details class="ge-question"><summary><strong>冻结原文与证据</strong></summary><div class="ge-body"><p>${exText(c.resourceTitle)} · ${exText(c.resourceId)} / ${exText(c.versionId)}</p>${c.evidence.map(b=>`<p><strong>${exText(b.location)}</strong>　${exText(b.text)}</p>`).join('')}</div></details>
     ${record}<div class="ge-footer">${exButton('返回工单复验','feedback-regression',id)}${archive}</div></div>`);
   if (file) notify('同题复验已归档');

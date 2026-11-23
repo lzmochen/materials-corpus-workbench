@@ -96,14 +96,14 @@ async function renderWorkspaceHome() {
   homeData=data;
   homeTasks=collectWorkItems(data,'home');
   const date=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long',timeZone:'Asia/Shanghai'}).format(new Date());
-  return `<header class="home-title"><h1>工作台</h1><time>${platIcon('calendar')}${escapeHtml(date)}</time></header>
+  return `<header class="home-title"><h1>工作台</h1><div class="home-head-actions"><button type="button" class="btn" data-action="nav" data-id="function-index">业务功能索引</button><time>${platIcon('calendar')}${escapeHtml(date)}</time></div></header>
     <div class="home-desks">
       <div class="home-practice" aria-label="业务办理">
         ${homeBusinessGroup('资源与语料制备',platformModules.slice(0,2),data,homeTasks)}
         ${homeBusinessGroup('标注与评测',platformModules.slice(2),data,homeTasks)}
         ${homeListPanel(data)}
         <section class="home-panel home-case-links"><header class="home-panel-head"><h2>科研案例与全流程</h2></header>
-          <nav aria-label="科研案例与全流程">${[['crystal','碳化硅晶体生长'],['research','双相钢退火'],['workflow','全流程办理']].map(([route,label])=>
+          <nav aria-label="科研案例与全流程">${[['materials-tools','文献与分子工具'],['crystal','碳化硅晶体生长'],['research','双相钢退火'],['workflow','全流程办理']].map(([route,label])=>
             '<button type="button" data-action="nav" data-id="'+route+'">'+label+platIcon('arrow')+'</button>').join('')}</nav>
         </section>
       </div>

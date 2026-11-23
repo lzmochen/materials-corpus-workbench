@@ -117,13 +117,15 @@ async function renderProductionDesk() {
   let actions=workBtn('全流程办理','nav','workflow');
   if (stage==='prepare') {
     const data=await api(pipeBase);
+    actions+=workBtn('文献与分子工具','nav','materials-tools');
     if(pipeWriter()) actions+='<button type="button" class="btn primary" data-pd="new-pipe">'+workIcon('plus')+'新建制备任务</button>';
     tools=productionTool('steps','制备管线','核查原文、合成问答',productionAction('pipes'))
       +productionTool('sheets','知识抽取与核查','提取材料、性能与工艺字段',productionAction('extract'))
-      +productionTool('rows','语料批次','审核问答、移交标注',productionRoute('batches'));
+      +productionTool('rows','语料批次','审核问答、移交标注',productionRoute('batches'))
+      +productionTool('steps','加工工作流编排','按原文类型选择加工路径',planProcessingAttr('workflow'));
     more='<details class="pd-more"><summary>辅助工具</summary><div>'
       +(lsWrite()?workBtn('模板管理','ls-config'):'')
-      +productionControl('data-guide="pairs"','图文语料配对')+'</div></details>';
+      +productionControl('data-guide="pairs"','图文语料配对')+productionControl(planProcessingAttr('image'),'多模态证据标注')+'</div></details>';
     spec={title:'制备任务',toolsTitle:'制备工具',distribution:'制备方式分布',empty:'当前范围暂无制备任务',
       headers:['任务与来源','制备方式','当前状态','更新时间'],
       states:[['','全部'],['review','待核查'],['generation','可合成'],['quality','待质检'],['finished','已质检']],
@@ -133,7 +135,9 @@ async function renderProductionDesk() {
     const [sets,quality,batches]=await Promise.all(['/api/distillations','/api/quality-work','/api/batches'].map(path=>api(path)));
     tools=productionTool('shield','样本质量评价','逐条核对规则分和原文证据',productionAction('quality','samples'))
       +productionTool('sheets','跨源一致性','比对试样、单位和试验条件',productionAction('quality','cross'))
-      +productionTool('rows','蒸馏选集','按质量门槛与材料覆盖选样','data-distill="library"');
+      +productionTool('rows','蒸馏选集','查看已保存的训练选样','data-distill="library"')
+      +productionTool('filter','去重与粗筛','设置规则分、去重与数量上限',planProcessingAttr('filter'))
+      +productionTool('box','专题语料组织','按材料、任务和模态组合样本',planProcessingAttr('topics'));
     const records=[
       ...quality.runs.map(r=>({...r,kind:'跨源核查',at:productionUpdated(r),result:Object.values(r.counts||{}).reduce((sum,n)=>sum+n,0)+' 个对照项',attrs:productionAction('quality-run',r.id)})),
       ...sets.map(r=>({...r,kind:'蒸馏选集',at:productionUpdated(r),result:r.count+' 条入选',attrs:'data-distill="open" data-id="'+escapeHtml(r.id)+'"'})),
@@ -145,6 +149,7 @@ async function renderProductionDesk() {
     tools=productionTool('box','数据发布','冻结版本，登记交付与下载',productionRoute('releases'))
       +productionTool('chart','训练实验','登记训练配置，对比实测指标',productionRoute('runs'))
       +productionTool('target','评测问题回流','受理错题反馈，追踪补充任务',productionAction('feedback'));
+    if(svcWriter())more='<details class="pd-more"><summary>课题二对接</summary><div>'+workBtn('数据集编排与读取','svc-supply-views')+workBtn('模型服务联调','svc-supply-models')+workBtn('服务监控与审计','svc-supply-monitor')+'</div></details>';
     const records=[
       ...versions.map(r=>({...r,kind:svcKind[r.kind]||r.kind,open:'home-release'})),
       ...runs.map(r=>({...r,kind:'训练实验',open:'home-run'})),

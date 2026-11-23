@@ -65,7 +65,7 @@ function exStepDraft(step, index, blocks, active = index) {
     <label class="field">步骤类型<select name="kind">${kinds.map(kind => `<option${exSelected(kind === step.kind)}>${exText(kind)}</option>`).join('')}</select></label>
     <label class="field">步骤说明<textarea name="text" maxlength="2000" rows="4" placeholder="填写本步核对的条件、数据或计算依据">${exText(step.text)}</textarea></label>
     <details class="ex-evidence-picker" open><summary>引用原文证据<span class="ex-caption" data-ex-evidence-count>${selected.size} 项已选</span></summary>${exEvidenceGroup('blockId',blocks,selected)}</details>
-    <div class="ex-form-actions">${exButton('移除本步','step-remove','',{quiet:true})}</div>
+    <div class="ex-form-actions"><button type="button" class="btn small" data-pp="prefill">从所选证据起草本步</button>${exButton('移除本步','step-remove','',{quiet:true})}</div>
   </fieldset>`;
 }
 function exStepNavigation(steps, active) {
@@ -442,7 +442,7 @@ async function renderAnnotations() {
   });
   const cls=sourceQueueFilters.annotations;
   const picker=`<details class="rd-more"><summary>分类筛选${cls.family||cls.topic?' · 已启用':''}</summary><div>${scope.controls(rows.length,entries.length,'项')}${cls.family||cls.topic?'<button type="button" class="rd-text-link" data-queue-clear="annotations">清除筛选</button>':''}</div></details>`;
-  return sectionHead('','领域专业思维链标注','',canCreate?exButton('查看训练批次','page','batches'):'')+`<section class="rd-panel">${reviewListHeader('标注队列',listed.length,workScopeMenu('annotations'))}${reviewDirectory('annotations',['试样与标注任务','原文资料','材料门类','标注人','状态'],rows,'搜索试样、指标或工单编号',tabs,picker)}</section>`;
+  return sectionHead('','领域专业思维链标注','',(canCreate?exButton('查看训练批次','page','batches'):'')+'<button type="button" class="btn" data-pp="image">多模态证据标注</button>')+`<section class="rd-panel">${reviewListHeader('标注队列',listed.length,workScopeMenu('annotations'))}${reviewDirectory('annotations',['试样与标注任务','原文资料','材料门类','标注人','状态'],rows,'搜索试样、指标或工单编号',tabs,picker)}</section>`;
 }
 
 function exBenchmarkEditForm(resources, item, benchmarkId) {
