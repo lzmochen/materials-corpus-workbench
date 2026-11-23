@@ -42,7 +42,8 @@ function queuedAnnotationBody(detail,sample) {
   const revision=detail.history?.length || 0;
   sourceQueueFilters.annotations.detailRevision=revision;
   if (!cache) return exAnnotationDetail(detail,sample);
-  if (!exOwn(detail.author) || !['draft','returned'].includes(detail.status) || cache.username!==window.workspaceUser?.username || cache.revision!==revision) {
+  if (!exOwn(detail.author) || cache.username!==window.workspaceUser?.username) return exAnnotationDetail(detail,sample);
+  if (!['draft','returned'].includes(detail.status) || cache.revision!==revision) {
     queueAnnotationDrafts.delete(detail.id);
     return exAnnotationDetail(detail,sample);
   }
