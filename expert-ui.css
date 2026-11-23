@@ -278,3 +278,17 @@
 .ex-criterion textarea { width:100%; }
 .ex-criterion [data-ex-evidence-count] { color:#617183; font-weight:400; }
 @media(max-width:720px) { .ex-criteria-grid { grid-template-columns:1fr; } }
+
+.ex-handoff-row {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px 16px;
+  padding:10px 14px;
+  border-left:3px solid #7294bb;
+  background:#f1f5fa;
+  color:#344f71;
+}
+.ex-handoff-row > span { min-width:0; line-height:1.55; }
+.app.platform .ex-handoff-row .btn { min-height:34px; color:#215687; background:white; }

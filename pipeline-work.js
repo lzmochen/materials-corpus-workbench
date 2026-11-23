@@ -33,18 +33,18 @@ function pipeKnowledge(r){
     escapeHtml(pipeRecordStates[k.status]),pipeButton('record',k.status==='pending'&&workCan('operator','expert','lead','admin')?'对照核查':'查看记录',k.id)
   ]));
 }
-function pipeSamples(r){
+function pipeSamples(r,bySample){
   return r.samples.length?workTable(['候选问答','证据位置','规则评分','处置','操作'],r.samples.map(s=>[
     '<strong>'+escapeHtml(s.question)+'</strong><div class="pw-answer">'+escapeHtml(s.answer)+'</div>',
     escapeHtml(s.evidence.map(x=>x.location).join('、')),s.quality?escapeHtml(String(s.quality.score))+' / 100':'待计算',
-    statusBadge(s.status),workBtn('核对样本','sample-open',s.id,'small')+(s.status==='passed'?workBtn('打开本样本标注','home-new-annotation',s.id,'small'):'')
+    statusBadge(s.status),workBtn('核对样本','sample-open',s.id,'small')+(s.status==='passed'?productionAnnotationAction(s,bySample.get(s.id)):'')
   ])):workEmpty(r.state==='queued'?'正在等待合成任务':'暂无候选问答');
 }
 function pipeSource(r){
   const s=r.source;
   return '<dl class="pw-source"><dt>文件名</dt><dd>'+escapeHtml(s.filename)+'</dd><dt>源版本</dt><dd>V'+escapeHtml(s.number)+' · '+escapeHtml(s.versionId)+'</dd><dt>原件摘要 SHA-256</dt><dd class="mono">'+escapeHtml(s.sha256)+'</dd><dt>证据块</dt><dd>'+s.blockCount+'</dd></dl>'+workBtn('打开原文与证据','resource-open',s.id+'|'+s.versionId,'small');
 }
-function pipeContent(r){
+function pipeContent(r,bySample){
   const t=r.extraction,b=r.batch;
   const tabs=[...(t?[['knowledge','核查条目 · '+t.counts.total]]:[]),['samples','产出样本 · '+r.samples.length],['source','输入版本']];
   if(!tabs.some(([id])=>id===pipeUi.tab))pipeUi.tab=t&&!b?'knowledge':'samples';
@@ -63,7 +63,7 @@ function pipeContent(r){
   return '<article class="pw-sheet"><header class="pw-sheet-head"><div><div class="pw-run-mode">'+escapeHtml(pipeRecipes[r.recipe])+'</div><h2>'+escapeHtml(r.title)+'</h2></div>'+pipeBadge(r.state)+'</header>'
     +'<div class="pw-context"><span>'+escapeHtml(r.source.filename)+' · V'+escapeHtml(r.source.number)+'</span><span>经办人 '+escapeHtml(r.createdBy)+'</span><span>更新于 '+workTime(r.updatedAt)+'</span></div>'
     +pipeSteps(r)+(r.state==='failed'?'<p class="form-error">'+escapeHtml(b.error||r.job?.error||'合成任务执行失败')+'</p>':'')
-    +'<div class="pw-actions">'+actions.join('')+'</div><div class="pw-tabs" aria-label="运行明细">'+controls+'</div><div class="pw-detail">'+(pipeUi.tab==='knowledge'?pipeKnowledge(r):pipeUi.tab==='samples'?pipeSamples(r):pipeSource(r))+'</div></article>';
+    +'<div class="pw-actions">'+actions.join('')+'</div><div class="pw-tabs" aria-label="运行明细">'+controls+'</div><div class="pw-detail">'+(pipeUi.tab==='knowledge'?pipeKnowledge(r):pipeUi.tab==='samples'?pipeSamples(r,bySample):pipeSource(r))+'</div></article>';
 }
 async function renderPipelineWork(){
   clearTimeout(pipeUi.timer);
@@ -84,7 +84,8 @@ async function renderPipelineWork(){
   }
   const run=await api(pipeBase+'/'+encodeURIComponent(active.id));
   pipeUi.run=run;
-  const body=pipeContent(run);
+  const annotations=run.samples.some(s=>s.status==='passed') ? await api('/api/annotations') : [];
+  const body=pipeContent(run,new Map(annotations.map(a=>[a.sampleId,a])));
   if(run.state==='queued')pipeUi.timer=setTimeout(()=>{if(window.workspacePage==='pipeline-work'&&!wb('#workspace-dialog').open)refresh();},1800);
   return sectionHead('','语料制备管线','',productionControl(productionAction('pipes'),'返回制备任务'))
     +'<div class="pw-desk">'+body+'</div>';
@@ -109,7 +110,11 @@ function pipePreviewForm(lockedSource){
     +'<label class="field" data-pipe-field="template">抽取模板<select name="template">'+workSelect([['properties','材料性能与测试'],['materials','材料综合属性'],['process','材料制备与热处理工艺']])+'</select></label>'
     +'<label class="field" data-pipe-field="limit" hidden>候选数上限<input name="maxCandidates" type="number" min="1" max="200" step="1" value="40" disabled required></label>'
     +workField('任务名称','title',{max:150,value:initial.title+' · '+pipeRecipes.extract})
-    +'<div data-pipe-preview aria-live="polite"></div><div class="actions">'+workBtn('取消','dialog-close')+pipeButton('preview','预览匹配结果')+'<button type="submit" class="btn primary" disabled>开始制备</button></div></form>');
+    +'<div data-pipe-preview aria-live="polite">先预览匹配到的原文证据，再开始制备。</div><div class="actions">'+workBtn('取消','dialog-close')+pipeButton('preview','预览匹配结果')+'<button type="submit" class="btn primary" disabled>开始制备</button></div></form>');
+}
+function resetPipePreview(form) {
+  form.querySelector('[data-pipe-preview]').textContent='参数已更新，请重新预览匹配结果。';
+  form.querySelector('[type="submit"]').disabled=true;
 }
 function pipeConfig(form){
   const v=Object.fromEntries(new FormData(form));
@@ -148,16 +153,14 @@ document.addEventListener('change',async event=>{
     const src=pipeUi.sources.find(s=>s.versionId===form.elements.versionId.value);
     form.elements.title.value=src.title+' · '+pipeRecipes[form.elements.recipe.value];
   }
-  form.querySelector('[data-pipe-preview]').replaceChildren();
-  form.querySelector('[type="submit"]').disabled=true;
+  resetPipePreview(form);
 });
 document.addEventListener('input',event=>{
   const el=event.target;
   const form=el.closest('form[data-pipe-form="create"]');
   if(!form)return;
   if(el.name==='title'){form.dataset.customTitle='true';return;}
-  form.querySelector('[type="submit"]').disabled=true;
-  form.querySelector('[data-pipe-preview]').replaceChildren();
+  resetPipePreview(form);
 });
 document.addEventListener('click',async event=>{
   const btn=event.target.closest('button[data-pipe]');
@@ -171,6 +174,7 @@ document.addEventListener('click',async event=>{
       const form=btn.form;
       if(!form.reportValidity())return;
       const cfg=pipeConfig(form);
+      form.querySelector('[data-pipe-preview]').textContent='正在核对原文证据…';
       const result=await api(pipeBase+'/preview','POST',cfg);
       if(!form.isConnected||JSON.stringify({...cfg,title:''})!==JSON.stringify({...pipeConfig(form),title:''}))return;
       form.querySelector('[data-pipe-preview]').innerHTML='<section class="pw-preview"><h3>'+result.sourceBlocks+' 个源证据块 · '+result.count+(cfg.recipe==='extract'?' 条待核查属性':' 条候选问答')+'</h3>'
@@ -184,8 +188,13 @@ document.addEventListener('click',async event=>{
     pipeUi.state='';pipeUi.tab=action==='generate'||action==='quality'?'samples':'';
     await refresh();
     notify(action==='retry'?'已重新提交同一批次。':action==='quality'?'批次质检已完成。':'问答批次已生成并完成质检。');
-  }catch(err){notify(err.message,'error');}
-  finally{btn.disabled=false;}
+  }catch(err){
+    if(action==='preview' && btn.form?.isConnected) {
+      btn.form.querySelector('[data-pipe-preview]').textContent='预览失败，可核对参数后重新预览。';
+      btn.form.querySelector('[type="submit"]').disabled=true;
+    }
+    notify(err.message,'error');
+  }finally{btn.disabled=false;}
 });
 document.addEventListener('submit',async event=>{
   const form=event.target.closest('form[data-pipe-form]');

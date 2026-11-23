@@ -51,6 +51,7 @@ async function catalogOpenFamily(family){
   workFilter.query='';workFilter.status='';workFilter.split='';
   catCategory='';guideTopic='';guideOrigin='';catPage=1;
   const owner=window.workspaceUser?.username;
+  workRecordScopes.delete(workScopeKey('catalog'));
   await navigate('resources');
   if(!owner||window.workspaceUser?.username!==owner||window.workspacePage!=='resources'||!wb('.cat-desk'))return;
   if(family&&workCatalog.some(resource=>guideFamily(resource)===family)){
@@ -114,20 +115,37 @@ async function catSetup(){
 }
 function catResults(){
   if(!catBatch)return;
-  openModal('批量抽取提交记录',`<div class="stack"><div class="cat-batch-list">${catBatch.rows.map(r=>`<div><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.message)}</small></div>`).join('')}</div>${!catBatch.running&&catBatch.rows.some(r=>r.status==='failed')?catButton('重试失败项','retry','','cat-batch'):''}</div>`);
+  const rows=catBatch.rows.map(row=>{
+    let action='';
+    if(row.taskId) action=workBtn('核查抽取结果','home-extraction',row.taskId,'small');
+    if(row.status==='failed'&&row.fieldMismatch) action=workBtn('调整抽取字段','work-extraction-create',row.id+'|'+row.version,'small');
+    if(row.status==='unknown') action=catLineageButton(row.id,row.version);
+    return `<div><div><strong>${escapeHtml(row.title)}</strong><br><small>v${escapeHtml(row.number)} · ${escapeHtml(row.message)}</small></div>${action}</div>`;
+  }).join('');
+  const retry=!catBatch.running&&catBatch.rows.some(row=>row.status==='failed')?catButton('重试失败项','retry','','cat-batch'):'';
+  openModal('批量抽取提交记录',`<div class="stack"><div class="cat-batch-list">${rows}</div>${retry}</div>`);
 }
 async function catRun(batch){
   if(batch.running)return;
   batch.running=true;catResults();catUpdate();
   for(const row of batch.rows.filter(r=>['pending','failed'].includes(r.status))){
-    if(catOwner!==window.workspaceUser?.username)break;
+    if(batch!==catBatch||batch.owner!==window.workspaceUser?.username)break;
     try{
       const task=await api('/api/luoshu/extractions','POST',{resourceId:row.id,versionId:row.version,template:batch.template});
-      row.status='ok';row.message='已提交 · '+task.id;catSelected.delete(row.id);
-    }catch(err){row.status=err.status?'failed':'unknown';row.message=err.status?'失败 · '+err.message:'提交结果待核对，请查看抽取任务';}
+      row.status='ok';row.taskId=task.id;row.message='已提交 · '+task.id;
+    }catch(err){
+      const rejected=err.status>=400&&err.status<500&&err.status!==408;
+      row.status=rejected?'failed':'unknown';
+      row.fieldMismatch=err.status===422;
+      row.message=rejected?'未提交 · '+err.message:'提交结果待确认，请核对该版本的关联记录';
+    }
+    if(batch!==catBatch||batch.owner!==window.workspaceUser?.username)break;
+    if(row.status!=='failed')catSelected.delete(row.id);
     if(wb('#workspace-dialog')?.open&&wb('#dialog-title').textContent==='批量抽取提交记录')catResults();
   }
-  batch.running=false;catUpdate();
+  batch.running=false;
+  if(batch!==catBatch||batch.owner!==window.workspaceUser?.username)return;
+  catUpdate();
   if(wb('#workspace-dialog')?.open&&wb('#dialog-title').textContent==='批量抽取提交记录')catResults();
 }
 document.addEventListener('click',async event=>{
@@ -158,7 +176,8 @@ document.addEventListener('click',async event=>{
     if(action==='batch'&&catWritable())await catSetup();
     if(action==='submit'&&catWritable()){
       if(catBatch?.running)return;
-      catBatch={template:wb('#cat-template').value,running:false,rows:workCatalog.filter(r=>catSelected.has(r.id)&&catEligible(r)).map(r=>({id:r.id,title:r.title,version:r.activeVersion,status:'pending',message:'待提交'}))};
+      const rows=workCatalog.filter(r=>catSelected.has(r.id)&&catEligible(r)).map(r=>({id:r.id,title:r.title,version:r.activeVersion,number:catActive(r).number,status:'pending',message:'待提交'}));
+      catBatch={owner:catOwner,template:wb('#cat-template').value,running:false,rows};
       await catRun(catBatch);
     }
     if(action==='retry'&&catWritable()&&catBatch)await catRun(catBatch);

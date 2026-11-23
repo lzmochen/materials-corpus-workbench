@@ -23,8 +23,33 @@ function trailButton(key,label,primary=false) {
 function trailSelect(label, key, options, value) {
   return '<label class="ct-field"><span>'+escapeHtml(label)+'</span><select data-trail-select="'+key+'">'+workSelect(options,value)+'</select></label>';
 }
-function trailStage(label, state, tone, subject, button) {
-  return '<li class="ct-stage"><div class="ct-stage-title"><span class="ct-dot '+tone+'" aria-hidden="true"></span><h3>'+escapeHtml(label)+'</h3></div><div class="ct-detail"><strong>'+escapeHtml(state)+'</strong><span>'+escapeHtml(subject)+'</span></div><div class="ct-action">'+(button||'')+'</div></li>';
+function trailStage(label,state,tone,subject,button,owner='') {
+  return {label,state,tone,subject,button,owner};
+}
+function trailProgress(rows) {
+  const next=rows.findIndex(row=>row.tone!=='complete');
+  const count=rows.filter(row=>row.tone==='complete').length;
+  const stages=rows.map((row,index)=>{
+    const current=index===next;
+    const owner=row.owner && row.tone!=='complete' ? '<span class="ct-owner">'+escapeHtml(row.owner)+'</span>' : '';
+    return '<li class="ct-stage'+(current?' ct-current':'')+'"'+(current?' aria-current="step"':'')+'><div class="ct-stage-title"><span class="ct-index '+row.tone+'" aria-hidden="true">'+(index+1)+'</span><div><h3>'+escapeHtml(row.label)+'</h3>'+owner+'</div></div><div class="ct-detail"><strong>'+escapeHtml(row.state)+'</strong><span>'+escapeHtml(row.subject)+'</span></div><div class="ct-action">'+(row.button||'')+'</div></li>';
+  }).join('');
+  return '<div class="ct-summary"><span><b>'+count+' / '+rows.length+'</b> 个环节已完成</span><strong>'+escapeHtml(next<0?'本条办理流程已完成':'当前环节 · '+rows[next].label)+'</strong></div><ol class="ct-stages">'+stages+'</ol>';
+}
+function trailBenchmarkTask(benchmark) {
+  const items=benchmark.items||[];
+  const actor=window.workspaceUser.username;
+  const lead=workCan('lead','admin');
+  if(benchmark.status==='published') return ['查看冻结基准','',false];
+  if(benchmark.status==='draft') {
+    const canEdit=benchmark.owner===actor || lead;
+    return [canEdit?'编制评测题':'查看评测进度','命题人 · '+reviewOwner(benchmark.owner),canEdit];
+  }
+  const conflict=items.some(item=>item.reviewState==='conflict');
+  if(conflict && lead && benchmark.owner!==actor) return ['处理仲裁','评测负责人',true];
+  if(items.length && items.every(item=>item.reviewState==='accepted')) return [lead?'办理冻结发布':'查看评测进度','评测负责人',lead];
+  if(workCan('expert') && benchmark.owner!==actor && items.some(item=>item.reviewState==='pending'&&!item.hasReviewed)) return ['办理独立评分','评审专家',true];
+  return ['查看评测进度',conflict?'评测负责人仲裁':'评审专家独立评分',false];
 }
 function trailLatest(rows) {
   return rows.slice().sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
@@ -67,19 +92,21 @@ function trailRows(record,data) {
   const manager=workCan('operator','lead','admin');
   const approved=version.status==='approved';
   const rows=[trailStage('原文登记与核准',workStatuses[version.status]?.[0]||version.status,approved?'complete':'active',
-    version.filename+' · v'+version.number,trailButton('source',approved?'查看核准原文':'查看并办理原文',!approved))];
+    version.filename+' · v'+version.number,trailButton('source',approved||!manager?'查看原文':'办理原文核查',manager&&!approved),'数据管理员')];
   const pass=samples.filter(s=>s.status==='passed').length;
   if(batch){
-    const done=batch.status==='reviewed';
-    rows.push(trailStage('问答生成与质检',workStatuses[batch.status]?.[0]||batch.status,done?'complete':'active',
-      batch.title+' · '+samples.length+' 条问答，'+pass+' 条通过',trailButton('batch',done?'查看语料批次':'办理当前批次',!done)));
+    const needsReview=sample?.status==='candidate' && sample.quality?.requiresExpert;
+    const done=batch.status==='reviewed' && sample?.status==='passed';
+    const review=needsReview && workCan('expert','lead','admin');
+    rows.push(trailStage('问答生成与质检',needsReview?'当前问答待专家复核':sample?.status==='rejected'?'当前问答已剔除':workStatuses[batch.status]?.[0]||batch.status,done?'complete':'active',
+      batch.title+' · '+samples.length+' 条问答，'+pass+' 条通过',review?trailButton('inspect','复核当前问答',true):trailButton('batch',done||!manager?'查看语料批次':'办理当前批次',manager&&!done),needsReview?'评审专家':'数据管理员'));
   }else if(extraction){
     const counts=extraction.counts || {};
     const state=counts.pending?'待核查抽取条目':counts.approved?'待合成问答':counts.rejected?'抽取条目已剔除':'制备进行中';
-    rows.push(trailStage('问答生成与质检',state,'active',extraction.title,trailButton('pipeline','查看制备任务',true)));
+    rows.push(trailStage('问答生成与质检',state,'active',extraction.title,trailButton('pipeline','查看制备任务',manager),'数据管理员'));
   }else{
     rows.push(trailStage('问答生成与质检',approved?'待制备':'待核准',approved?'active':'',
-      approved?'输入已锁定为所选训练原文版本':'原文核准后可开始制备',approved&&manager?trailButton('prepare','从此版本开始制备',true):''));
+      approved?'输入已锁定为所选训练原文版本':'原文核准后可开始制备',approved&&manager?trailButton('prepare','从此版本开始制备',true):'','数据管理员'));
   }
   const writable=workCan('operator','lead','admin','annotator');
   if(annotation){
@@ -87,11 +114,11 @@ function trailRows(record,data) {
     const editing=['draft','returned'].includes(annotation.status)&&annotation.author===window.workspaceUser.username;
     const state={approved:'复核通过',submitted:'待专家复核',draft:'草稿',returned:'已退回'}[annotation.status]||annotation.status;
     rows.push(trailStage('CoT 标注与专家复核',state,annotation.status==='approved'?'complete':'active',
-      sample.question,trailButton('annotation',reviewing?'办理专家复核':editing?'继续标注':'查看标注工单',reviewing||editing)));
+      sample.question,trailButton('annotation',reviewing?'办理专家复核':editing?'继续标注':'查看标注工单',reviewing||editing),annotation.status==='submitted'?'评审专家':'标注人 · '+reviewOwner(annotation.author)));
   }else{
     const passed=sample?.status==='passed';
     rows.push(trailStage('CoT 标注与专家复核',passed?'待标注':sample?.status==='rejected'?'当前问答已剔除':'待质检通过',passed?'active':'',
-      sample?sample.question:'使用通过质检的问答建立标注工单',passed&&writable?trailButton('sample','标注当前问答',true):sample?trailButton('inspect','查看问答'):''));
+      sample?sample.question:'使用通过质检的问答建立标注工单',passed&&writable?trailButton('sample','标注当前问答',true):sample?trailButton('inspect','查看问答'):'','语料标注员'));
   }
   if(benchmark){
     const h=benchmark.handoff;
@@ -99,15 +126,16 @@ function trailRows(record,data) {
     const heldVersion=held?.versions?.find(v=>v.id===h.holdoutVersionId);
     const bound=heldVersion ? ' · 独立留出原文 '+heldVersion.filename+' v'+heldVersion.number : '';
     const state=benchmark.status==='published'?'已冻结发布':workStatuses[benchmark.status]?.[0]||benchmark.status;
+    const [action,owner,canAct]=trailBenchmarkTask(benchmark);
     rows.push(trailStage('独立留出评测',state,benchmark.status==='published'?'complete':'active',
-      benchmark.title+bound,trailButton('benchmark',benchmark.status==='published'?'查看冻结基准':'办理评测',benchmark.status!=='published')));
+      benchmark.title+bound,trailButton('benchmark',action,canAct),owner));
   }else{
     const ready=annotation?.status==='approved';
     const next=ready?'由数据管理员或评测负责人选择独立留出题，核对证据及评分标准':'标注复核通过后，使用另一份留出原文出题';
     rows.push(trailStage('独立留出评测',ready?'待关联留出题':'待标注通过',ready?'active':'',next,
-      ready&&!workCan('annotator')?trailButton('handoff',manager?'制备关联评测':'查看评测交接',manager):''));
+      ready&&!workCan('annotator')?trailButton('handoff',manager?'制备关联评测':'查看评测交接',manager):'','数据管理员或评测负责人'));
   }
-  return rows.join('');
+  return trailProgress(rows);
 }
 
 async function renderCaseTrail() {
@@ -120,7 +148,9 @@ async function renderCaseTrail() {
   const r=trailChoose(data);
   caseScreen=r;
   const actions=workCan('operator','lead','admin')?workBtn('登记训练文件','resource-create','','primary','plus'):'';
-  const guide='<button type="button" class="btn" data-action="nav" data-id="crystal">科研案例</button>';
+  const dossier=r.resource?.researchCase;
+  const routes={'sic-solvent-growth-v1':['crystal','碳化硅科研案例'],'dual-phase-annealing-v1':['research','双相钢科研案例']};
+  const guide=routes[dossier] ? workBtn(routes[dossier][1],'nav',routes[dossier][0]) : '';
   const heading=sectionHead('','全流程办理','',guide+actions);
   if(!r.resource) return heading+workEmpty('暂无训练资料','登记训练文件后可查看各环节的办理进度。');
   rememberCaseTrail(r.resource.id,r.version.id,r.sample?.id,r.batch?.id,r.extraction?.id);
@@ -131,8 +161,9 @@ async function renderCaseTrail() {
   const samplePicker=r.samples.length>1 ? trailSelect('当前问答','sample',r.samples.map(o=>[o.id,o.question]),r.sample.id) : '';
   return heading+`<section class="ct-work"><header class="ct-heading"><h2>办理进度</h2><button class="btn small" type="button" data-action="refresh">刷新进度</button></header>
     ${savedChoice?'<p class="ct-note">此前选中的资料或版本已无法访问，请核对当前选择。</p>':''}
-    <div class="ct-pickers">${casePicker}${batchPicker}${samplePicker}</div>
-    <ol class="ct-stages">${trailRows(r,data)}</ol></section>`;
+    <div class="ct-pickers">${casePicker}</div>
+    ${batchPicker||samplePicker?'<details class="ct-branches"><summary>切换制备记录或问答</summary><div class="ct-pickers">'+batchPicker+samplePicker+'</div></details>':''}
+    ${trailRows(r,data)}</section>`;
 }
 document.addEventListener('change',async event=>{
   const select=event.target.closest('select[data-trail-select]');

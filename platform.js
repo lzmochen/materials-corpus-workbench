@@ -44,7 +44,7 @@ function platformShell() {
     <div class="p-utils"><button class="p-tool p-find" type="button" data-action="platform-search" aria-label="全站检索">${platIcon('search')}<span>全站检索</span><kbd>⌘ K</kbd></button>
     <button class="p-tool p-help" type="button" data-public-help aria-label="使用帮助">${platIcon('book')}<span>使用帮助</span></button>
     <button class="p-tool" type="button" data-action="platform-inbox" aria-label="岗位待办">${platIcon('inbox')}<span>待办</span></button>
-    <button class="p-tool p-settings" type="button" data-action="platform-tools" aria-label="运行管理">${platIcon('tools')}</button>${role}</div></div></header>
+    <button class="p-tool p-settings" type="button" data-action="platform-tools" aria-label="业务工具" title="业务工具">${platIcon('tools')}</button>${role}</div></div></header>
     <nav class="p-nav" aria-label="业务导航"><div class="p-nav-inner">${routes.map(m=>{const active=chosen?.key===m.key || route===m.key || (['workflow','research','crystal'].includes(route) && m.key==='home');return `<button type="button" class="p-tab ${active?'active':''}" data-action="nav" data-id="${m.key}" title="${m.title}" ${active?'aria-current="page"':''}>${platIcon(m.icon)}<span>${m.label}</span></button>`;}).join('')}</div></nav>
     <main id="content" class="content p-content" tabindex="-1"><div class="initial-load" role="status">正在读取业务记录…</div></main></div>`;
 }
@@ -120,7 +120,7 @@ function platformMount(route,html) {
   const parent=mod?.key==='generation' && route!==mod.key ? `<button class="p-parent" type="button" data-action="nav" data-id="generation">${escapeHtml(mod.label)}</button><span class="p-slash">/</span>` : '';
   const header=route==='home' ? '' : route==='resources' ? platformResourceHead() : `<header class="p-page-head"><div class="p-page-name">${parent}<h1>${escapeHtml(title)}</h1></div><div class="section-actions">${actions}</div></header>`;
   root.dataset.route=route;
-  const caseBack=caseChoice.resourceId && !['workflow','research','crystal','home','jobs','accounts','audit'].includes(route)
+  const caseBack=caseChoice.resourceId && !['workflow','research','crystal','home','generation','jobs','accounts','audit'].includes(route)
     ? `<button class="ct-return" type="button" data-action="nav" data-id="workflow">${workIcon('chevron')}返回办理进度</button>` : '';
   root.innerHTML=caseBack+header+secondary;
   root.append(temp.content);
@@ -148,15 +148,34 @@ function platformSearchRows(q) {
   }
   return result.length?`<div class="p-result-count">匹配 ${result.length} 条${result.length>35?' · 显示前 35 条':''}</div>`+result.slice(0,35).join(''):workEmpty('未找到匹配记录');
 }
+function platformFollowUp(stage,items) {
+  if(stage || workScopeValue('inbox')==='practice') return '';
+  const sources=new Map(utilityView.resources.map(row=>[row.id,row]));
+  const pendingIds=new Set(items.map(row=>row.id));
+  const records=utilityView.annotations.filter(a=>sources.get(a.resourceId)?.researchCase && a.status!=='approved' && !pendingIds.has(a.id));
+  if(!records.length) return '';
+  const labels={draft:'待标注人提交',returned:'待标注人修订',submitted:'待专家复核'};
+  return '<details class="p-followup"><summary>科研协作进度（'+records.length+'）</summary>'+records.map(a=>
+    utilityButton('home-annotation',a.id,sources.get(a.resourceId).title,labels[a.status]||a.status,'nodes')).join('')+'</details>';
+}
 function platformTaskRows(stage){
   const items=collectWorkItems(utilityView).filter(t=>!stage || t.stage===stage);
-  return items.length?items.map(t=>utilityButton(t.action,t.target,t.name,t.stage+' · '+t.label+' · '+t.id,'pending')).join(''):workEmpty('当前岗位暂无待办');
+  const rows=items.map(t=>utilityButton(t.action,t.target,t.name,t.stage+' · '+t.label+' · '+t.id,'pending')).join('');
+  return (rows||workEmpty('当前岗位暂无待办'))+platformFollowUp(stage,items);
 }
 async function platformUtility(type){
   const rev=++utilityVersion;
   if(type==='tools'){
     const items=[['jobs','加工队列'],...(workCan('lead','admin')?[['audit','审计日志']]:[]),...(workCan('admin')?[['accounts','账号管理']]:[])];
-    openModal('运行管理',items.map(([key,label])=>workBtn(label,'nav',key)).join(' ')+(window.workspaceUser.meeting?'':' '+workBtn('修改密码','password')+' '+workBtn('退出账号','logout')));
+    const sections=[
+      ['业务办理', [['workflow','全流程办理']]],
+      ['科研案例', [['crystal','碳化硅晶体生长'],['research','双相钢科研案例']]],
+      ['运行管理', items]
+    ];
+    const groups=sections.map(([title,links])=>
+      '<section><h3>'+title+'</h3><div class="row">'+links.map(([key,label])=>workBtn(label,'nav',key)).join('')+'</div></section>');
+    if(!window.workspaceUser.meeting) groups.push('<section><h3>当前账号</h3><div class="row">'+workBtn('修改密码','password')+workBtn('退出账号','logout')+'</div></section>');
+    openModal('业务工具','<div class="p-tool-groups">'+groups.join('')+'</div>');
     return;
   }
   openModal(type==='search'?'全站检索':'岗位待办','<div class="initial-load">正在读取记录…</div>');

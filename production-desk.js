@@ -1,7 +1,7 @@
 'use strict';
 
 const productionStages = [['prepare','语料制备'],['quality','质检与选样'],['delivery','发布与训练']];
-const productionDesk = {stage:'prepare', opening:'', query:'', family:'', topic:'', status:'', page:0, batches:[]};
+const productionDesk = {stage:'prepare', prepareFilter:'', prepareRuns:[], opening:'', query:'', family:'', topic:'', status:'', page:0, batches:[]};
 
 function productionControl(attrs, label, extra='') {
   return '<button type="button" class="pd-link '+extra+'" '+attrs+'>'+escapeHtml(label)+'</button>';
@@ -22,6 +22,19 @@ function productionUpdated(row) { return row.updatedAt || row.publishedAt || row
 function productionRecent(records) {
   return workScopeRows(records,'production').slice().sort((a,b)=>workCaseRank(a)-workCaseRank(b) || productionUpdated(b).localeCompare(productionUpdated(a))).slice(0,5);
 }
+function productionQueue(runs) {
+  const visible=workScopeRows(runs,'production');
+  const stage=productionDesk.prepareFilter;
+  const options=[['','全部'],['review','待核查'],['generation','可合成'],['quality','待质检']];
+  const filters=options.map(([value,label])=>{
+    const count=value?visible.filter(run=>run.state===value).length:visible.length;
+    return '<button type="button" data-pd="queue-filter" data-id="'+value+'" aria-pressed="'+(stage===value)+'">'+label+' <b>'+count+'</b></button>';
+  }).join('');
+  const matches=visible.filter(row=>!stage||row.state===stage).sort((a,b)=>productionUpdated(b).localeCompare(productionUpdated(a)));
+  const records=productionList(['任务名称','制备方式','当前状态','更新时间'],matches.slice(0,5).map(productionPipeRow),stage?'当前范围没有此状态的任务':'暂无制备任务');
+  return productionPanel('最近制备任务',productionControl(productionAction('queue-all'),'全部任务'),
+    '<div class="pd-queue-filters" role="group" aria-label="按制备进度筛选">'+filters+'</div>'+records);
+}
 function productionPipeRow(r) {
   return [productionName(r.title,productionAction('pipe',r.id)),escapeHtml(pipeRecipes[r.recipe] || r.recipe),pipeBadge(r.state),workTime(productionUpdated(r))];
 }
@@ -32,21 +45,24 @@ function productionStageNav() {
 async function renderProductionDesk() {
   const restored=history.state?.productionStage;
   if(productionStages.some(([key])=>key===restored))productionDesk.stage=restored;
-  const stage=productionDesk.stage;
+  const stage=productionDesk.stage, actor=window.workspaceUser.username;
   let tools,more='',desk;
+  let actions=workBtn('全流程办理','nav','workflow');
   if (stage==='prepare') {
     const [data,resources,batches]=await Promise.all([api(pipeBase),api('/api/resources'),api('/api/batches')]);
     const sources=new Map(resources.map(r=>[r.id,r]));
     const sourceOfBatch=new Map(batches.map(r=>[r.id,r.resourceId]));
     const runs=data.runs.map(r=>({...r,researchCase:sources.get(r.resourceId || sourceOfBatch.get(r.id))?.researchCase}));
+    if(pipeWriter()) actions+='<button type="button" class="btn primary" data-pd="new-pipe">'+workIcon('plus')+'新建制备任务</button>';
     tools=productionTool('steps','制备管线','从原文核查到问答合成',productionAction('pipes'))
       +productionTool('sheets','知识抽取与核查','提取材料、性能与工艺字段',productionAction('extract'))
       +productionTool('rows','语料批次','导入教师候选，审查训练问答',productionRoute('batches'));
     more='<details class="pd-more"><summary>辅助工具</summary><div>'
       +(lsWrite()?workBtn('模板管理','ls-config'):'')
       +productionControl('data-guide="pairs"','图文语料配对')+'</div></details>';
-    desk=productionPanel('最近制备任务',productionControl(productionAction('pipes'),'全部任务'),
-      productionList(['任务名称','制备方式','当前状态','更新时间'],productionRecent(runs).map(productionPipeRow),'暂无制备任务'));
+    if(window.workspacePage!=='generation'||window.workspaceUser?.username!==actor)return '';
+    productionDesk.prepareRuns=runs;
+    desk='<div id="pd-prepare-queue">'+productionQueue(runs)+'</div>';
   } else if (stage==='quality') {
     const [sets,quality,batches,resources]=await Promise.all(['/api/distillations','/api/quality-work','/api/batches','/api/resources'].map(path=>api(path)));
     tools=productionTool('shield','样本质量评价','逐条核对规则分和原文证据',productionAction('quality','samples'))
@@ -81,7 +97,7 @@ async function renderProductionDesk() {
         ]),'暂无完成质检并通过审核的批次'));
     }
   }
-  return sectionHead('','数据生成与蒸馏','')+'<div class="pd-desk"><section class="pd-panel"><div class="pd-stage-head">'+productionStageNav()+'<div class="research-queue-link">'+workScopeMenu('production')+more+'</div>'+'</div><div class="pd-tools">'+tools+'</div></section>'+desk+'</div>';
+  return sectionHead('','数据生成与蒸馏','',actions)+'<div class="pd-desk"><section class="pd-panel"><div class="pd-stage-head">'+productionStageNav()+'<div class="research-queue-link">'+workScopeMenu('production')+more+'</div>'+'</div><div class="pd-tools">'+tools+'</div></section>'+desk+'</div>';
 }
 
 function productionBatchMode(row) {
@@ -125,6 +141,18 @@ async function openProductionBatch(id) {
   try { await navigate('batch-record'); }
   finally { if(productionDesk.opening===id)productionDesk.opening=''; }
 }
+function productionAnnotationAction(sample,annotation) {
+  if(sample.status!=='passed') return sample.status==='rejected'?'已剔除':'待质检通过';
+  if(!annotation) return workCan('operator','annotator','lead','admin')
+    ? workBtn('开始标注','home-new-annotation',sample.id,'small') : '待建立标注工单';
+  const owner=annotation.author===window.workspaceUser.username;
+  let label='查看标注工单';
+  if(owner && annotation.status==='draft') label='继续标注';
+  if(owner && annotation.status==='returned') label='修订标注';
+  if(!owner && annotation.status==='submitted' && workCan('expert','lead','admin')) label='复核标注';
+  if(annotation.status==='approved') label='查看复核结果';
+  return workBtn(label,'home-annotation',annotation.id,'small');
+}
 async function renderProductionBatchRecord() {
   const id=productionDesk.opening || history.state?.batchId;
   const back=workBtn('返回批次台账','nav','batches');
@@ -134,7 +162,8 @@ async function renderProductionBatchRecord() {
   let batch;
   try {batch=await api('/api/batches/'+encodeURIComponent(id));}
   catch(error){if(error.status===404)return sectionHead('','批次详情','',back)+workEmpty('未找到该批次');throw error;}
-  const [samples,r]=await Promise.all([api('/api/samples'),api('/api/resources/'+encodeURIComponent(batch.resourceId))]);
+  const [samples,r,annotations]=await Promise.all([api('/api/samples'),api('/api/resources/'+encodeURIComponent(batch.resourceId)),api('/api/annotations')]);
+  const bySample=new Map(annotations.map(annotation=>[annotation.sampleId,annotation]));
   const v=r.versions.find(v=>v.id===batch.versionId);
   const rows=samples.filter(s=>s.batchId===id), passed=batch.counts?.passed||0;
   const canCheck=workCan(...workflowWriters) && ['generated','reviewed'].includes(batch.status) && !rows.some(s=>s.quality);
@@ -147,7 +176,7 @@ async function renderProductionBatchRecord() {
   const visible=rows.filter(s=>!workSampleStatus || s.status===workSampleStatus);
   const select='<label class="pd-inline-filter">样本状态<select id="work-sample-status">'+workSelect([['','全部'],['candidate','待处理'],['passed','已通过'],['rejected','已剔除']],workSampleStatus)+'</select></label>';
   const samplesTable=productionList(['问答样本','原文位置','规则分','状态','标注'],visible.map(s=>[
-    productionName(s.question,'data-action="sample-open" data-id="'+escapeHtml(s.id)+'"'),escapeHtml(s.evidence[0]?.location||'—'),s.quality?.score??'—',statusBadge(s.status),s.status==='passed'?workBtn('打开本样本标注','home-new-annotation',s.id,'small'):'—'
+    productionName(s.question,'data-action="sample-open" data-id="'+escapeHtml(s.id)+'"'),escapeHtml(s.evidence[0]?.location||'—'),s.quality?.score??'—',statusBadge(s.status),productionAnnotationAction(s,bySample.get(s.id))
   ]),'当前范围暂无问答样本');
   const info='<details class="pd-disclosure"><summary>批次信息</summary><div class="pd-record-meta"><span>批次编号　'+escapeHtml(id)+'</span><span>原文版本　'+escapeHtml(batch.versionId)+'</span><span>生成模板　'+escapeHtml(workTemplateNames[batch.template]||batch.template)+'</span>'+extra+'</div></details>';
   return sectionHead('','批次详情','',back)+'<div class="pd-desk">'+productionPanel(batch.title,'',meta
@@ -163,6 +192,20 @@ async function productionFeedback() {
 async function productionCommand(name,id) {
   switch (name) {
     case 'stage': productionDesk.stage=id;history.replaceState({...history.state,productionStage:id},'',location.href);return refresh();
+    case 'queue-filter': {
+      const panel=document.getElementById('pd-prepare-queue');
+      if(!panel)return;
+      productionDesk.prepareFilter=id;
+      panel.innerHTML=productionQueue(productionDesk.prepareRuns);
+      panel.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+      return;
+    }
+    case 'queue-all': pipeUi.openTarget='';pipeUi.tab='';pipeUi.state=productionDesk.prepareFilter;return navigate('pipeline-work');
+    case 'new-pipe':
+      if(!pipeWriter()) return;
+      await productionCommand('pipes');
+      if(window.workspacePage==='pipeline-work' && wb('#content [data-pipe="create"]')) pipePreviewForm();
+      return;
     case 'pipes': pipeUi.openTarget='';pipeUi.tab='';pipeUi.state='';return navigate('pipeline-work');
     case 'pipe': pipeUi.openTarget=id;pipeUi.tab='';pipeUi.state='';return navigate('pipeline-work');
     case 'extract': lsState.tab='tasks'; return navigate('extraction');

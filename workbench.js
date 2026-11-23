@@ -134,23 +134,29 @@ async function refresh() {
     wb('#content').innerHTML=sectionHead('',workPages[route][0],error.message,workBtn('重试','refresh'));
   }
 }
-async function navigate(route) {
+async function navigate(route,review) {
   route=platformRoute(route);
   if (!Object.hasOwn(workPages,route) || !window.workspaceUser) return;
   if ((route==='audit' && !workCan('lead','admin')) || (route==='accounts' && !workCan('admin'))) route='resources';
+  if (window.workspacePage==='annotations' && wb('[data-form="ex-annotation-edit"]')?.dataset.owner===window.workspaceUser.username) keepAnnotationDraft();
   window.workspacePage=route;
   if (location.hash!==`#${route}`) {
     const alias=['#luoshu',''].includes(location.hash);
-    history[alias?'replaceState':'pushState'](null,'',`#${route}`);
+    history[alias?'replaceState':'pushState'](review?{review}:null,'',`#${route}`);
+  } else if (review) {
+    const prev=history.state?.review;
+    const same=(prev?.kind||'')===review.kind && (prev?.id||'')===review.id;
+    history[same?'replaceState':'pushState']({...history.state,review},'');
   }
+  restoreReviewEntry(route);
   closeModal(); workShell();
   window.scrollTo(0,0);
   await refresh();
   wb('#content')?.focus({preventScroll:true});
 }
-function collectWorkItems(data) {
+function collectWorkItems(data, desk = 'inbox') {
   const allRecords=data;
-  data=Object.fromEntries(Object.entries(data).map(([key,rows])=>[key,Array.isArray(rows)?workScopeRows(rows,'inbox'):rows]));
+  data=Object.fromEntries(Object.entries(data).map(([key,rows])=>[key,Array.isArray(rows)?workScopeRows(rows,desk):rows]));
   const ranks=new Map();
   const resources=new Map(allRecords.resources.map(r=>[r.id,r]));
   for(const records of Object.values(allRecords)) if(Array.isArray(records)) for(const r of records) {
@@ -343,17 +349,17 @@ async function sampleOpen(id) {
   const quality=sample.quality;
   const reviewerRoles=sample.mode==='teacher'?['expert','lead','admin']:workflowWriters;
   const canReview=Boolean(quality)&&!sample.review&&workCan(...reviewerRoles);
+  const annotation=sample.status==='passed' ? (await api('/api/annotations')).find(item=>item.sampleId===id) : null;
   let decisions=[];
   if (canReview) {
     if (quality.eligible) decisions.push(['pass', '通过复核']);
-    const annotated=sample.status==='passed' && (await api('/api/annotations')).some(item=>item.sampleId===id);
-    if (!annotated) decisions.push(['reject', '剔除']);
+    if (!annotation) decisions.push(['reject', '剔除']);
   }
   const issues=quality?.issues||[];
   openModal('样本与原文核查',`<div class="stack"><div class="split"><span class="mono muted">${escapeHtml(sample.id)}</span>${statusBadge(sample.status)}</div><div class="distill-review"><div class="document"><h3>问题</h3><p>${escapeHtml(sample.question)}</p><h3>答案</h3><p>${escapeHtml(sample.answer)}</p>${sample.teacher?`<p class="muted">教师信息 · ${escapeHtml(sample.teacher)}</p>`:''}${sample.review?`<p>人工复核 · ${sample.review.decision==='pass'?'通过':'剔除'} · ${escapeHtml(sample.review.by)} · ${workTime(sample.review.at)}</p><p>${escapeHtml(sample.review.note)}</p>`:''}</div>
     <section class="stack"><h3>原文证据</h3>${sample.evidence.map(block=>`<div class="document"><strong>${escapeHtml(block.location)}</strong><span class="mono muted"> ${escapeHtml(block.blockId)}</span><p>${escapeHtml(block.text)}</p></div>`).join('')}</section></div>
     ${quality?`<section class="panel"><div class="panel-head"><h3>规则质检</h3><strong>${quality.score} / 100</strong></div><div class="panel-body"><div class="quality-grid">${Object.entries(qualityLabels).map(([key,label])=>`<div><label>${label}<strong>${quality.dimensions[key]??(sample.review?'人工复核':'待专家复核')}</strong></label>${quality.dimensions[key]!=null?`<progress max="100" value="${quality.dimensions[key]}"></progress>`:''}</div>`).join('')}</div>${issues.length?`<ul class="distill-issues">${issues.map(issue=>`<li>${escapeHtml(issue)}</li>`).join('')}</ul>`:''}</div></section>`:''}
-    ${sample.status==='passed'?'<div class="actions">'+workBtn('打开本样本标注','home-new-annotation',id,'primary','steps')+'</div>':''}
+    ${sample.status==='passed'?'<div class="actions">'+productionAnnotationAction(sample,annotation)+'</div>':''}
     ${decisions.length?workModalForm('sample-review',`<input type="hidden" name="id" value="${escapeHtml(id)}"><label class="field">审核决定<select name="decision">${workSelect(decisions)}</select></label>${workField('审核理由','note',{max:500})}`,'提交复核'):`<div class="actions">${workBtn('关闭','dialog-close')}</div>`}</div>`);
 }
 async function renderWorkJobs() {
@@ -426,7 +432,7 @@ async function handleWorkAction(action,el) {
     case 'platform-inbox': return platformUtility('inbox');
     case 'platform-tools': return platformUtility('tools');
     case 'work-connect': return connectWorkbench();
-    case 'nav': return navigate(id);
+    case 'nav': return navigate(id,isReviewDesk(id)?reviewEntry(id):undefined);
     case 'refresh': return refresh();
     case 'dialog-close': return closeModal();
     case 'logout': await api('/api/logout','POST'); closeModal(); workLogin(); return;
@@ -537,6 +543,7 @@ document.addEventListener('change',async event=>{
     }
     if (el.id==='work-sample-status') {workSampleStatus=el.value; await refresh(); return;}
     if (el.id==='work-meeting-role' && window.workspaceUser?.meeting) {
+      if (window.workspacePage==='annotations') keepAnnotationDraft();
       el.disabled=true;
       try {
         window.workspaceUser=await api('/api/meeting/role','POST',{username:el.value});
@@ -552,6 +559,10 @@ document.addEventListener('change',async event=>{
   } catch(error) {notify(error.message,'error');}
 });
 window.addEventListener('hashchange',()=>navigate(platformRoute(location.hash.slice(1))));
+window.addEventListener('popstate',()=>{
+  // A list and its record share a hash. Cross-module traversal triggers hashchange.
+  if (isReviewDesk(window.workspacePage) && location.hash==='#'+window.workspacePage) void navigate(window.workspacePage);
+});
 function workConnectionError(message) {
   wb('#app').innerHTML=`<main class="content">${sectionHead('','工作台暂时无法连接',message,workBtn('重新连接','work-connect','','primary'))}</main>`;
 }

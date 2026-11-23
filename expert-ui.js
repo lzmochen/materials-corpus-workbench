@@ -116,6 +116,27 @@ function exMaterialCriteria(annotation, editable) {
   return `<details class="ex-material-criteria"${Object.keys(criteria).length ? ' open' : ''}><summary>比较条件与适用范围</summary>
     <div class="ex-criteria-grid">${fields}</div></details>`;
 }
+const exHandoffRoles = ['operator','annotator','expert-a','expert-b','lead'];
+
+function exHandoffRow(message, receiver, section, id, itemId = '') {
+  const canSwitch = window.workspaceUser?.meeting && exHandoffRoles.includes(receiver) && !exOwn(receiver);
+  const switcher = canSwitch ? exButton('切换至' + reviewOwner(receiver),'next-role',id,{extra:
+    ` data-receiver="${exText(receiver)}" data-section="${exText(section)}" data-item-id="${exText(itemId)}"`}) : '';
+  return `<div class="ex-handoff-row"><span>${exText(message)}</span>${switcher}</div>`;
+}
+
+function exAnnotationHandoff(annotation, canEdit, canReview) {
+  if (!canEdit && ['draft','returned'].includes(annotation.status)) {
+    const task = annotation.status === 'returned' ? '按复核意见修订标注。' : '补全推理步骤并提交复核。';
+    return exHandoffRow('待' + reviewOwner(annotation.author) + task,annotation.author,'annotations',annotation.id);
+  }
+  if (!canReview && annotation.status === 'submitted') {
+    const reviewer = annotation.author === 'expert-a' ? 'expert-b' : 'expert-a';
+    return exHandoffRow('标注已提交，待独立专家复核。',reviewer,'annotations',annotation.id);
+  }
+  return '';
+}
+
 function exAnnotationDetail(annotation, sample) {
   const canEdit = exOwn(annotation.author) && ['draft','returned'].includes(annotation.status);
   const canReview = exAllowed('expert','lead','admin') && !exOwn(annotation.author) && annotation.status === 'submitted';
@@ -127,7 +148,7 @@ function exAnnotationDetail(annotation, sample) {
     ? [...exKinds.map(kind => recorded.find(step=>step.kind===kind) || {kind,text:'',blockIds:[]}), ...recorded.filter(step=>!exKinds.includes(step.kind))]
     : recorded;
   const active = Math.min(exEditorViews.get(annotation.id) || 0, steps.length - 1);
-  const editable = `<form class="stack ex-form" data-form="ex-annotation-edit" data-id="${exText(annotation.id)}">
+  const editable = `<form class="stack ex-form" data-form="ex-annotation-edit" data-id="${exText(annotation.id)}" data-owner="${exText(annotation.author)}">
     <div class="ex-editor-bar"><h3>步骤编辑器</h3><span data-ex-complete aria-live="polite">${steps.filter(s => s.text?.trim() && s.blockIds?.length).length} / ${steps.length} 步完整</span><small data-ex-save-state>已载入草稿</small></div>
     <div class="ex-step-nav" aria-label="选择标注步骤">${exStepNavigation(steps,active)}</div>
     <div class="ex-step-grid">${steps.map((step,index) => exStepDraft(step,index,annotation.availableBlocks || [],active)).join('')}</div>
@@ -137,7 +158,7 @@ function exAnnotationDetail(annotation, sample) {
   const review = canReview ? `<form class="ex-review-form stack" data-form="ex-annotation-review" data-id="${exText(annotation.id)}"><h3>专家复核</h3><label class="field">复核意见<textarea name="note" rows="2" maxlength="2000" placeholder="退回时填写需要修正的步骤及原因"></textarea></label><div class="ex-form-actions">${exSubmit('退回修改','return')}${exSubmit('通过复核','approve')}</div></form>` : '';
   const previous = annotation.review?.note ? `<div class="ex-context"><h3>${annotation.review.action === 'return' ? '退回意见' : '复核意见'}</h3><p>${exText(annotation.review.note)}</p><span class="ex-caption">${exText(annotation.review.display || annotation.review.username)} · ${exText(exDate(annotation.review.at))}</span></div>` : '';
   const controls = annotation.status === 'approved' ? `<div class="ex-form-actions">${exBadge(annotation.status)}${exButton('评测交接','annotation-handoff',annotation.id,{primary:true})}${exButton('导出标注 JSON','annotation-export',annotation.id)}</div>` : exBadge(annotation.status);
-  return exPanel('标注工作单','',`<div class="stack">${question}${previous}${canEdit ? editable : readOnly}${review}<details class="ex-history"><summary>工单来源与版本</summary>${heading}</details>${exHistory(annotation.history)}</div>`,controls);
+  return exPanel('标注工作单','',`<div class="stack">${exAnnotationHandoff(annotation,canEdit,canReview)}${question}${previous}${canEdit ? editable : readOnly}${review}<details class="ex-history"><summary>工单来源与版本</summary>${heading}</details>${exHistory(annotation.history)}</div>`,controls);
 }
 function handoffEvidence(candidate) {
   return `<h3>${exText(candidate.question)}</h3>
@@ -214,26 +235,60 @@ async function exFinishHandoff(form,data,manualItem) {
   return true;
 }
 
-async function openAnnotationRecord(id) {
-  reviewListState.annotations.query = '';
-  reviewListState.annotations.page = 1;
-  exState.annotationFilter = 'all';
-  exState.annotation = id;
-  exState.sample = '';
-  await navigate('annotations');
+function isReviewDesk(route) {
+  return route==='annotations' || route==='benchmarks';
 }
-async function openNewSampleAnnotation(id) {
-  reviewListState.annotations.query = '';
-  reviewListState.annotations.page = 1;
-  exState.annotationFilter = 'all';
-  exState.annotation = '';
-  exState.sample = id;
-  await navigate('annotations');
+function reviewEntry(route, kind='', id='') {
+  const filter=route==='annotations'?exState.annotationFilter:exState.benchmarkFilter;
+  const list=reviewListState[route];
+  const source=route==='annotations'?sourceQueueFilters.annotations:{};
+  return {route,kind,id,username:window.workspaceUser.username,query:list.query,page:list.page,
+    filter,scope:workScopeValue(route),family:source.family||'',topic:source.topic||'',
+    item:kind==='benchmark'?(exItemViews.get(id)||''):''};
 }
-async function openBenchmarkRecord(id) {
-  exState.benchmarkFilter = 'all';
-  exState.benchmark = id;
-  await navigate('benchmarks');
+function restoreReviewEntry(route) {
+  if (!isReviewDesk(route)) return;
+  const entry=history.state?.review;
+  const target=entry?.route===route?entry:null;
+  const sameUser=target && target.username===window.workspaceUser.username;
+  if (sameUser) {
+    Object.assign(reviewListState[route],{query:target.query || '',page:target.page || 1});
+    if (route==='annotations') {
+      exState.annotationFilter=target.filter || 'all';
+      Object.assign(sourceQueueFilters.annotations,{family:target.family||'',topic:target.topic||''});
+    } else exState.benchmarkFilter=target.filter || 'all';
+    workRecordScopes.set(workScopeKey(route),target.scope || 'active');
+  } else if (target) {
+    Object.assign(reviewListState[route],{query:'',page:1});
+    if (route==='annotations') {
+      exState.annotationFilter='all';
+      Object.assign(sourceQueueFilters.annotations,{family:'',topic:''});
+    } else exState.benchmarkFilter='all';
+  }
+  if (route==='annotations') {
+    exState.annotation=target?.kind==='annotation'?target.id:'';
+    exState.sample=target?.kind==='sample'?target.id:'';
+  } else {
+    exState.benchmark=target?.kind==='benchmark'?target.id:'';
+    if (exState.benchmark && target.item) exItemViews.set(exState.benchmark,target.item);
+  }
+}
+function replaceReviewEntry(route,kind='',id='') {
+  if (!isReviewDesk(route) || window.workspacePage!==route || location.hash!=='#'+route) return;
+  history.replaceState({...history.state,review:reviewEntry(route,kind,id)},'');
+}
+function openAnnotationRecord(id) {
+  return navigate('annotations',reviewEntry('annotations','annotation',id));
+}
+function openNewSampleAnnotation(id) {
+  return navigate('annotations',reviewEntry('annotations','sample',id));
+}
+function openBenchmarkRecord(id) {
+  return navigate('benchmarks',reviewEntry('benchmarks','benchmark',id));
+}
+async function returnReviewDirectory(route) {
+  await navigate(route,reviewEntry(route));
+  wb('[data-rd-query]')?.focus({preventScroll:true});
 }
 function exSamplePreview(sample, canCreate) {
   const evidence = (sample.evidence || []).map(exEvidenceCard).join('');
@@ -275,6 +330,7 @@ function reviewListPage(key,rows) {
   const matches=rows.filter(r=>cotMatches(state.query,r.search));
   const pages=Math.max(1,Math.ceil(matches.length/8));
   state.page=Math.min(pages,Math.max(1,state.page));
+  replaceReviewEntry(key);
   const visible=new Set(matches.slice((state.page-1)*8,state.page*8));
   return {matches,pages,visible};
 }
@@ -324,21 +380,33 @@ function reviewTabs(action,pairs,active) {
   return `<div class="rd-tabs" aria-label="状态筛选">${pairs.map(([key,label,count])=>`<button type="button" data-action="ex-${action}" data-id="${key}" aria-pressed="${key===active}">${exText(label)}<span>${count}</span></button>`).join('')}</div>`;
 }
 async function renderAnnotations() {
+  const revision=workView;
   const [annotations,allSamples,resources]=await Promise.all([api('/api/annotations'),api('/api/samples'),api('/api/resources')]);
+  if (revision!==workView) return '';
   const sampleById=new Map(allSamples.filter(s=>s.status==='passed').map(s=>[s.id,s]));
   const assigned=new Map(annotations.map(r=>[r.sampleId,r]));
   const pending=[...sampleById.values()].filter(s=>!assigned.has(s.id));
-  const selected=annotations.find(r=>r.id===exState.annotation || r.sampleId===exState.sample);
-  const requestedSample=selected ? null : sampleById.get(exState.sample);
+  let selected=annotations.find(r=>r.id===exState.annotation || r.sampleId===exState.sample);
+  let requestedSample=selected ? null : sampleById.get(exState.sample);
+  let detail;
+  if (selected) {
+    try { detail=await api('/api/annotations/'+exPath(selected.id)); }
+    catch(error) {
+      if (![403,404].includes(error.status)) throw error;
+      selected=null;requestedSample=null;
+    }
+    if (revision!==workView) return '';
+  }
   const canCreate=exAllowed('annotator','operator','lead','admin');
   const scope=sourceQueueView('annotations',resources,selected || requestedSample);
   if (selected || requestedSample) {
-    const detail=selected && await api('/api/annotations/'+exPath(selected.id));
     exState.annotation=detail?.id || '';exState.sample=requestedSample?.id || '';
+    replaceReviewEntry('annotations',detail?'annotation':'sample',detail?.id || requestedSample.id);
     exState.blocks=detail?.availableBlocks || [];scope.select(detail || requestedSample);
     return sectionHead('','领域专业思维链标注','')+reviewBack('返回标注队列','annotation-back')+
       '<div class="rd-detail">'+(detail?queuedAnnotationBody(detail,sampleById.get(detail.sampleId)):exSamplePreview(requestedSample,canCreate))+'</div>';
   }
+  if (exState.annotation || exState.sample) notify('该记录已移除或当前岗位无权查看，已返回标注队列。');
   exState.annotation='';exState.sample='';exState.blocks=[];scope.select(null);
   const titles=new Map(resources.map(r=>[r.id,r]));
   const entries=[...annotations.map(rec=>({rec,sample:sampleById.get(rec.sampleId),status:rec.status})),...pending.map(sample=>({rec:sample,sample,status:'new'}))];
@@ -410,6 +478,21 @@ function exDisagreement(item) {
   const reason = ranking[0] !== ranking[1] ? '两位专家对候选回答的排序不同。' : '同一候选回答的总分差超过满分的 20%。';
   return `<section class="ex-disagreement"><h3>分歧核对</h3><p>${reason}</p><table><thead><tr><th>独立评审</th><th>候选 A 总分</th><th>候选 B 总分</th></tr></thead><tbody>${rows}</tbody></table></section>`;
 }
+function exItemHandoff(benchmark, item, canReview, canArbitrate) {
+  if (benchmark.status !== 'reviewing') return '';
+  if (item.reviewState === 'conflict' && !canArbitrate) {
+    return exHandoffRow('两份评分存在分歧，待未参与制题的评测负责人或管理员仲裁。',
+      benchmark.owner === 'lead' ? '' : 'lead','benchmarks',benchmark.id,item.id);
+  }
+  if (item.reviewState !== 'pending' || canReview) return '';
+  let reviewer = '';
+  if (!item.reviewCount) reviewer = benchmark.owner === 'expert-a' ? 'expert-b' : 'expert-a';
+  if (item.hasReviewed && exOwn('expert-a')) reviewer = 'expert-b';
+  if (item.hasReviewed && exOwn('expert-b')) reviewer = 'expert-a';
+  return exHandoffRow(item.reviewCount ? '待另一名专家独立评分。' : '本题已送审，待专家独立评分。',
+    reviewer === benchmark.owner ? '' : reviewer,'benchmarks',benchmark.id,item.id);
+}
+
 function exBenchmarkItem(benchmark, item) {
   const canEdit = item.id !== benchmark.handoff?.itemId && benchmark.status === 'draft' && (exOwn(benchmark.owner) || exAllowed('lead','admin'));
   const canReview = benchmark.status === 'reviewing' && exAllowed('expert') && !item.hasReviewed && !exOwn(benchmark.owner) && item.reviewState === 'pending';
@@ -418,8 +501,7 @@ function exBenchmarkItem(benchmark, item) {
   const editType = canArbitrate ? 'arbitrate' : 'review';
   const scores = item.candidates?.length || item.rubric?.length ? exScoreGrid(item, canReview || canArbitrate) : '';
   const context = item.reviewState === 'pending' && benchmark.status === 'reviewing'
-    ? (item.hasReviewed ? '本人评分已提交' : canReview ? '评分提交后锁定' : '仅独立评审专家可填写')
-    : item.reviewState === 'conflict' && !canArbitrate ? '由评测负责人仲裁' : '';
+    ? (item.hasReviewed ? '本人评分已提交' : canReview ? '评分提交后锁定' : '') : '';
   const scoreForm = canReview || canArbitrate ? `<form class="ex-review-form stack" data-form="ex-item-${editType}" data-id="${exText(benchmark.id)}" data-item-id="${exText(item.id)}" data-rubric-count="${item.rubric.length}"><h3>${canArbitrate ? '仲裁定稿' : '独立盲评'}</h3>${scores}<label class="field">${canArbitrate ? '仲裁依据' : '评分意见'}<textarea name="note" rows="2" maxlength="2000" required></textarea></label><div class="ex-form-actions">${exSubmit(canArbitrate ? '提交仲裁' : '提交独立评分',editType)}</div></form>` : scores;
   const ref = item.answer ? `<details class="ex-history"><summary>参考答案与原文证据</summary><div class="ex-reference"><h4>参考答案</h4><p>${exText(item.answer)}</p>${item.evidence?.length ? `<ul class="ex-evidence-list">${item.evidence.map(exEvidenceCard).join('')}</ul>`:''}</div></details>` : '';
   const result = item.result ? `<div class="ex-context"><h3>${item.result.kind === 'arbitration' ? '仲裁结论' : '一致性结论'}</h3><p>${exText(item.result.note || '专家评分一致性达到发布条件。')}</p></div>` : '';
@@ -427,7 +509,7 @@ function exBenchmarkItem(benchmark, item) {
   const progress = benchmark.status === 'reviewing' ? `<span>已评 ${exText(item.reviewCount ?? 0)} / 2</span>` : '';
   const source = `<details class="ex-history"><summary>试题编号与留出来源</summary><p class="ex-caption">试题 ${exText(item.id)} · 资源 ${exText(item.resourceId)} · 版本 ${exText(item.versionId)}</p></details>`;
   return `<article class="ex-benchmark-item stack"><div class="ex-line ex-item-meta"><span>${exText(item.category)}</span>${progress}${context ? `<span>${context}</span>` : ''}${benchmark.status !== 'draft' && item.reviewState !== 'pending' ? exBadge(item.reviewState) : ''}</div><h3>${exText(item.question)}</h3>
-    ${exDisagreement(item)}${ref}${scoreForm}${source}${exScoresReview(item)}${result}${tools ? `<div class="ex-form-actions">${tools}</div>` : ''}</article>`;
+    ${exItemHandoff(benchmark,item,canReview,canArbitrate)}${exDisagreement(item)}${ref}${scoreForm}${source}${exScoresReview(item)}${result}${tools ? `<div class="ex-form-actions">${tools}</div>` : ''}</article>`;
 }
 
 function exCanProgressFeedback(ticket) {
@@ -453,6 +535,7 @@ function exBenchmarkDetail(benchmark, feedback) {
   const accepted = benchmark.items.filter(item => item.reviewState === 'accepted').length;
   const unresolved = benchmark.items.filter(item=>item.reviewState === 'conflict').length;
   const canPublish = !draft && !published && exAllowed('lead','admin') && benchmark.items.length > 0 && accepted === benchmark.items.length;
+  const awaitFreeze = benchmark.status === 'reviewing' && benchmark.items.length && accepted === benchmark.items.length && !canPublish;
   const toolbar = draft && canDraft ? exButton('添加留出题','item-add',benchmark.id,{primary:true}) + exButton('提交专家盲评','benchmark-submit',benchmark.id,{disabled:!benchmark.items.length})
     : canPublish ? exButton('冻结并发布','benchmark-publish',benchmark.id,{primary:true})
     : published && !exAllowed('annotator') ? exButton('导出基准 JSON','benchmark-export',benchmark.id,{primary:true}) : '';
@@ -468,18 +551,29 @@ function exBenchmarkDetail(benchmark, feedback) {
   const origin = h ? `<div class="ex-context"><h3>来源标注</h3><p>${exText(h.resourceTitle || h.annotationId)}${h.holdoutTitle?'　→　'+exText(h.holdoutTitle):''}</p>${h.transferReason?'<p>跨门类依据　'+exText(h.transferReason)+'</p>':''}${exButton('查看办理进度','handoff-trail',h.resourceId,{extra:` data-version="${exText(h.versionId)}" data-sample="${exText(h.sampleId)}"`})}</div>` : '';
   const metadata = `<details class="ex-history"><summary>基准信息</summary><p>${benchmark.description ? exText(benchmark.description) + ' · ' : ''}编号 ${exText(benchmark.id)} · 命题人 ${exText(benchmark.owner)}${benchmark.version ? ' · 版本 ' + exText(benchmark.version) : ''}</p>${design}</details>`;
   const content = `<div class="stack" data-ex-item-browser="${exText(benchmark.id)}"><div class="ex-benchmark-overview"><ol class="ex-stages hitl-stages" aria-label="评测流程">${stages.map((label,index)=>`<li${index === stage?' aria-current="step"':''}><span>${index+1}</span>${label}</li>`).join('')}</ol></div>
-  ${origin}${topicNav}${benchmark.items.map(item => `<div data-ex-item-pane="${exText(item.id)}"${item.id !== chosen.id ? ' hidden' : ''}>${exBenchmarkItem(benchmark,item)}</div>`).join('') || exEmpty('暂无评测题')}${metadata}${exHistory(benchmark.history)}</div>`;
+  ${awaitFreeze ? exHandoffRow('全部试题已定稿，待评测负责人冻结并发布基准。','lead','benchmarks',benchmark.id,chosen?.id) : ''}${origin}${topicNav}${benchmark.items.map(item => `<div data-ex-item-pane="${exText(item.id)}"${item.id !== chosen.id ? ' hidden' : ''}>${exBenchmarkItem(benchmark,item)}</div>`).join('') || exEmpty('暂无评测题')}${metadata}${exHistory(benchmark.history)}</div>`;
   return `${exPanel(benchmark.title,'',content,(toolbar || agreement) ? `<div class="ex-form-actions">${agreement}${toolbar}</div>` : '')}${published || relevant.length ? exFeedbackPanel(relevant,benchmark) : ''}`;
 }
 async function renderBenchmarks() {
+  const revision=workView;
   const [allBenchmarks,resources]=await Promise.all([api('/api/benchmarks'),api('/api/resources')]);
+  if (revision!==workView) return '';
   const benchmarks=workScopeRows(allBenchmarks,'benchmarks');
   const selected=allBenchmarks.find(item=>item.id===exState.benchmark);
+  let detail;
   if (selected) {
-    const [detail,feedback]=await Promise.all([api('/api/benchmarks/'+exPath(selected.id)),api('/api/feedback')]);
+    try { detail=await api('/api/benchmarks/'+exPath(selected.id)); }
+    catch(error) { if (![403,404].includes(error.status)) throw error; }
+    if (revision!==workView) return '';
+  }
+  if (detail) {
+    const feedback=await api('/api/feedback');
+    if (revision!==workView) return '';
+    replaceReviewEntry('benchmarks','benchmark',detail.id);
     const auto=exAllowed('operator','lead','admin') || (exAllowed('expert') && detail.status==='published') ? exButton('多维自动评测','evaluation-open',detail.id) : '';
     return sectionHead('','基准评审与发布','',auto)+reviewBack('返回基准目录','benchmark-back')+`<div class="rd-detail">${exBenchmarkDetail(detail,feedback)}</div>`;
   }
+  if (exState.benchmark) notify('该记录已移除或当前岗位无权查看，已返回基准目录。');
   exState.benchmark='';
   const active=exState.benchmarkFilter, states=[['all','全部基准'],['draft','草稿'],['reviewing','评审中'],['published','已发布']];
   const tabs=reviewTabs('benchmark-filter',states.map(([key,label])=>[key,label,key==='all'?benchmarks.length:benchmarks.filter(item=>item.status===key).length]),active);
@@ -595,6 +689,18 @@ async function expertUiAction(action, el) {
       break;
     }
     case 'ex-handoff-trail': await openCaseTrail(id,el.dataset.version,el.dataset.sample); break;
+    case 'ex-next-role': {
+      const {receiver, section, itemId} = el.dataset;
+      if (!window.workspaceUser?.meeting || !exHandoffRoles.includes(receiver)) throw new Error('请联系承办岗位接续办理');
+      if (!['annotations','benchmarks'].includes(section)) break;
+      window.workspaceUser = await api('/api/meeting/role','POST',{username:receiver});
+      if (section === 'annotations') await openAnnotationRecord(id);
+      else {
+        if (itemId) exItemViews.set(id,itemId);
+        await openBenchmarkRecord(id);
+      }
+      break;
+    }
     case 'ex-handoff-operator':
       if (!window.workspaceUser?.meeting) throw new Error('请由数据管理员接续办理');
       window.workspaceUser=await api('/api/meeting/role','POST',{username:'operator'});
@@ -605,11 +711,11 @@ async function expertUiAction(action, el) {
     case 'ex-annotation-handoff': await openAnnotationBenchmarkHandoff(id); break;
     case 'ex-handoff-manual': await openAnnotationBenchmarkHandoff(id,true); break;
     case 'ex-page': closeModal(); await navigate(id); break;
-    case 'ex-annotation-back': keepAnnotationDraft(); exState.annotation='';exState.sample='';await refresh();wb('[data-rd-query]')?.focus({preventScroll:true});break;
+    case 'ex-annotation-back': await returnReviewDirectory('annotations');break;
     case 'ex-annotation-filter': exState.annotationFilter=id;reviewListState.annotations.page=1;await refresh();break;
-    case 'ex-benchmark-back': exState.benchmark='';await refresh();wb('[data-rd-query]')?.focus({preventScroll:true});break;
-    case 'ex-annotation-select': keepAnnotationDraft(); exState.annotation = id; exState.sample = ''; await refresh(); break;
-    case 'ex-sample-select': keepAnnotationDraft(); exState.sample = id; exState.annotation = ''; await refresh(); break;
+    case 'ex-benchmark-back': await returnReviewDirectory('benchmarks');break;
+    case 'ex-annotation-select': await openAnnotationRecord(id); break;
+    case 'ex-sample-select': await openNewSampleAnnotation(id); break;
     case 'ex-annotation-new': {
       const annotation = await api('/api/annotations','POST',{sampleId:id});
       exState.annotation = annotation.id;
@@ -628,6 +734,7 @@ async function expertUiAction(action, el) {
     case 'ex-item-select': {
       const panel = el.closest('[data-ex-item-browser]');
       exItemViews.set(panel.dataset.exItemBrowser,id);
+      replaceReviewEntry('benchmarks','benchmark',panel.dataset.exItemBrowser);
       for (const section of panel.querySelectorAll('[data-ex-item-pane]')) section.hidden = section.dataset.exItemPane !== id;
       for (const button of panel.querySelectorAll('[data-action="ex-item-select"]')) button.setAttribute('aria-pressed',String(button.dataset.id === id));
       break;
@@ -652,7 +759,7 @@ async function expertUiAction(action, el) {
     }
     case 'ex-annotation-export': downloadJson(`${id}-CoT.json`,await api(`/api/annotations/${exPath(id)}/export`)); break;
     case 'ex-benchmark-filter': reviewListState.benchmarks.page = 1; exState.benchmarkFilter = id; exState.benchmark = ''; await refresh(); break;
-    case 'ex-benchmark-select': exState.benchmark = id; await refresh(); break;
+    case 'ex-benchmark-select': await openBenchmarkRecord(id); break;
     case 'ex-benchmark-new': exBenchmarkModal(); break;
     case 'ex-item-add': await exShowItemEditor(id); break;
     case 'ex-item-edit': await exShowItemEditor(benchmarkId,id); break;
@@ -728,11 +835,10 @@ async function expertUiSubmit(form, submitter) {
     }
     case 'ex-benchmark-create': {
       const benchmark = await api('/api/benchmarks','POST',{title:exTrim(data,'title'),description:exTrim(data,'description')});
-      exState.benchmark = benchmark.id;
-      exState.benchmarkFilter = 'all';
-      close = true;
-      message = '评测基准已创建';
-      break;
+      closeModal();
+      await openBenchmarkRecord(benchmark.id);
+      notify('评测基准已创建');
+      return true;
     }
     case 'ex-handoff-prepare': return exFinishHandoff(form,data);
     case 'ex-handoff-manual':
@@ -810,15 +916,10 @@ document.addEventListener('input', event => {
     : filled.length + '/' + fields.length + ' 项';
 });
 
-// Bare module links open their directory; explicit task links keep the requested record.
+// Reset the design desk when entered from a module link.
 document.addEventListener('click',event=>{
   const link=event.target.closest('[data-action="nav"]');
   if (!link) return;
   const route=link.dataset.id;
-  if(route==='annotations'){
-    keepAnnotationDraft();
-    exState.annotation='';exState.sample='';
-  }
-  if(route==='benchmarks')exState.benchmark='';
   if(route==='benchmark-work')benchmarkPreparation.reset();
 },true);
