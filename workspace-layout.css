@@ -204,7 +204,8 @@ body,.app.platform{background:var(--campus-paper);color:var(--ink)}
 .home-case-links nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px 20px;padding:9px 18px}
 .home-case-links button{display:inline-flex;align-items:center;gap:8px;background:transparent;border:0;color:var(--campus-blue);font:inherit;font-weight:560;font-size:var(--ui-record);padding:5px 2px;cursor:pointer}
 .home-case-links button:hover{text-decoration:underline}
-.home-case-links .p-icon{width:15px;height:15px}
+.home-link-symbol{display:grid;place-items:center;flex:none;width:27px;height:27px;border-radius:6px;background:#e8f2f7;color:#216589}
+.home-link-symbol .p-icon{width:18px;height:18px}
 @media(max-width:600px){.home-case-links nav{padding:8px 13px;gap:4px 12px}.home-case-links button{font-size:14px}}
 
 .home-module-load{display:flex;flex-wrap:wrap;gap:3px 15px;margin-top:7px;color:var(--campus-muted);font-size:var(--ui-label);line-height:1.55}

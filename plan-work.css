@@ -37,6 +37,24 @@
 .material-tool-icon svg { display: block; width: 25px; height: 25px; }
 .material-tool-icon .tool-solid { fill: currentColor; }
 .material-tool-icon .tool-paper { fill: currentColor; fill-opacity: .09; }
+.biz-item { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; gap: 10px; min-width: 0; }
+.biz-symbol {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: #296687;
+  background: #e8f2f7;
+  border-radius: 7px;
+}
+.biz-symbol .p-icon { width: 21px; height: 21px; }
+.biz-symbol .tool-paper { fill: currentColor; fill-opacity: .09; }
+.biz-symbol .tool-solid { fill: currentColor; }
+@media (max-width: 600px) {
+  .biz-item { grid-template-columns: 27px minmax(0, 1fr); gap: 7px; }
+  .biz-symbol { width: 27px; height: 27px; border-radius: 6px; }
+  .biz-symbol .p-icon { width: 18px; height: 18px; }
+}
 @container (max-width: 390px) {
   .tool-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; }
   .material-tool-icon { width: 32px; height: 32px; border-radius: 7px; }

@@ -103,8 +103,8 @@ async function renderWorkspaceHome() {
         ${homeBusinessGroup('标注与评测',platformModules.slice(2),data,homeTasks)}
         ${homeListPanel(data)}
         <section class="home-panel home-case-links"><header class="home-panel-head"><h2>科研案例与全流程</h2></header>
-          <nav aria-label="科研案例与全流程">${[['materials-tools','文献与分子工具'],['crystal','碳化硅晶体生长'],['research','双相钢退火'],['workflow','全流程办理']].map(([route,label])=>
-            '<button type="button" data-action="nav" data-id="'+route+'">'+label+platIcon('arrow')+'</button>').join('')}</nav>
+          <nav aria-label="科研案例与全流程">${[['materials-tools','文献与分子工具','structure'],['crystal','碳化硅晶体生长','crystal'],['research','双相钢退火','anneal'],['workflow','全流程办理','nodes']].map(([route,label,icon])=>
+            '<button type="button" data-action="nav" data-id="'+route+'"><span class="home-link-symbol" aria-hidden="true">'+featureIcon(icon)+'</span>'+label+'</button>').join('')}</nav>
         </section>
       </div>
       <aside class="home-overview" aria-label="统计概览">

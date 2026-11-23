@@ -24,10 +24,30 @@ const platformIcons = {
   arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',
   book:'<path d="M4 3.5h12a3 3 0 0 1 3 3v14H6.5a2.5 2.5 0 0 1-2.5-2.5V3.5Zm0 13h15M8 7h7M8 10h5"/>',
   person:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/>',
-  pending:'<circle cx="12" cy="12" r="8.4"/><path d="M12 6.5V12l3.6 2"/>'
+  pending:'<circle cx="12" cy="12" r="8.4"/><path d="M12 6.5V12l3.6 2"/>',
+  clean:'<path d="m5 16 9-11a2 2 0 0 1 3-.2l3 3a2 2 0 0 1 .1 2.7L12 20H9l-4-4Zm4.5-5.5 6 5.5M13 20h8"/>',
+  annotate:'<path d="M11 4H4v15h4m-1-11h4m-4 4h2m9-6 3 3m-10 9 2.8-.8L21 9.8a1.5 1.5 0 0 0 0-2.1L19.3 6a1.5 1.5 0 0 0-2.1 0L10 13.6 9 19z"/>',
+  imageRegion:'<path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4"/><rect x="6" y="6" width="12" height="12" rx="1.3"/><path d="m6.5 15 3.5-3 2 2 2.5-3 3 4"/><circle cx="9.4" cy="9.4" r=".8"/>',
+  qa:'<path d="M3 4h12v8H9l-4 3v-3H3z"/><path d="M18 8h3v9h-3v3l-4-3h-4v-2"/>',
+  versions:'<circle cx="7" cy="5" r="2.4"/><circle cx="7" cy="19" r="2.4"/><circle cx="18" cy="7" r="2.4"/><path d="M7 7.5v9m.5-2c3-5 10-1.2 10.5-5"/>',
+  lineage:'<rect x="2.5" y="9" width="5" height="6" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/><path d="M7.5 12H12V5.5h4m-4 6.5v6.5h4"/>',
+  publish:'<path d="M4 14v6h16v-6M12 16V3m-5 5 5-5 5 5"/>',
+  trend:'<path d="M3 4v16h18M6 15l4.5-4.5 3.3 2.7L21 6m-5.8 0H21v5.8"/>',
+  api:'<path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18"/>',
+  monitor:'<rect x="2.5" y="4" width="19" height="13.5" rx="1.7"/><path d="M5 11h3l1.5-3 3.2 6.2 1.8-4.2H19M9 21h6m-3-3.5V21"/>',
+  plug:'<path d="M8 3v5m7-5v5M5 8h13v3a6.5 6.5 0 0 1-13 0V8Zm6.5 9.5V21"/>',
+  clipboard:'<rect x="5" y="5" width="14" height="16" rx="1.5"/><rect x="9" y="2.5" width="6" height="5" rx="1" fill="white"/><path d="M8 12h8m-8 4h5"/>',
+  chip:'<rect x="5.5" y="5.5" width="13" height="13" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 3v2.5M15 3v2.5M9 18.5V21m6-2.5V21M3 9h2.5M3 15h2.5m13-6H21m-2.5 6H21"/>',
+  crystal:'<path d="m4 9 4-5h8l4 5-8 12-8-12Zm0 0h16M8 4l2 5 2 12 2-12 2-5"/>',
+  anneal:'<path d="M3 16h18v4H3zM7 13c-4-3 3-5 0-9m5 9c-4-3 3-5 0-10m5 10c-4-3 3-5 0-9"/>'
 };
-function platIcon(name) {
-  return `<svg class="p-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${platformIcons[name] || platformIcons.book}</svg>`;
+function platIcon(name, glyphs=platformIcons) {
+  return `<svg class="p-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${glyphs[name] || platformIcons.book}</svg>`;
+}
+function featureIcon(name) {
+  if (Object.hasOwn(platformIcons,name)) return platIcon(name);
+  if (Object.hasOwn(materialToolGlyphs,name)) return platIcon(name,materialToolGlyphs);
+  return platIcon(name,workIconPaths);
 }
 function platMark(){
   return '<img class="p-mark" src="/materials-corpus-workbench/workspace-mark.svg" alt="" width="40" height="40">';
