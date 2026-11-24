@@ -16,6 +16,7 @@ const ppTemplateNames={source:'按原文字段抽取',properties:'材料性能�
 async function ppWorkflowForm() {
   const plans=await api(pipeBase+'/workflows');
   const rows=ppWorkflows.map(r=>[escapeHtml(r.title),escapeHtml(r.input),escapeHtml(r.steps),pipeWriter()?ppBtn('采用此流程','recipe',r.id):'']);
+  rows.push(['科研曲线提取','应力–应变、极化等科学曲线图','图像识别 → 坐标校准 → 数据点校核 → 复核入库',workBtn('打开曲线工作台','nav','curve-work','small')]);
   const latest=new Map();
   plans.forEach(p=>latest.set(p.series,Math.max(latest.get(p.series)||0,p.revision)));
   const saved=plans.map(p=>[escapeHtml(p.title)+' · V'+p.revision,escapeHtml(pipeRecipes[p.params.recipe]),p.params.recipe==='extract'?ppTemplateNames[p.params.template]:p.params.maxCandidates+' 条',
@@ -115,7 +116,7 @@ const ppKinds={point:'特征点',rect:'矩形区域',line:'折线／曲线点列
 async function ppImages() {
   const pairs=workScopeRows(await api('/api/multimodal-pairs'),'catalog');
   const rows=pairs.map(p=>[ppBtn(p.image.title,'image-edit',p.id),escapeHtml(p.evidence.location),escapeHtml(p.text.title),(p.regions||[]).length]);
-  openModal('多模态证据标注','<div class="stack"><div class="split"><h3>图像与原文证据</h3>'+ (guideWritable()?'<button class="btn primary" type="button" data-guide="new-pair">新建图文配对</button>':'')+'</div>'+(rows.length?workTable(['图像原件','引用位置','配对文本','区域标注'],rows):workEmpty('暂无图文配对','先将一份图像与已核准的文本或表格证据配对。'))+'<div class="actions">'+ppBtn('配对库与导出','pair-library')+'</div></div>');
+  openModal('多模态证据标注','<div class="stack"><div class="split"><h3>图像与原文证据</h3>'+workBtn('科学曲线识别与标注','nav','curve-work')+ (guideWritable()?'<button class="btn primary" type="button" data-guide="new-pair">新建图文配对</button>':'')+'</div>'+(rows.length?workTable(['图像原件','引用位置','配对文本','区域标注'],rows):workEmpty('暂无图文配对','先将一份图像与已核准的文本或表格证据配对。'))+'<div class="actions">'+ppBtn('配对库与导出','pair-library')+'</div></div>');
 }
 
 function ppDraw(f) {

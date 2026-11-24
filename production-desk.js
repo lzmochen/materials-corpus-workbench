@@ -122,6 +122,7 @@ async function renderProductionDesk() {
     tools=productionTool('steps','制备管线','核查原文、合成问答',productionAction('pipes'))
       +productionTool('sheets','知识抽取与核查','提取材料、性能与工艺字段',productionAction('extract'))
       +productionTool('rows','语料批次','审核问答、移交标注',productionRoute('batches'))
+      +productionTool('chart','科学曲线识别','提取曲线数据点，校准坐标并复核',productionRoute('curve-work'))
       +productionTool('steps','加工工作流编排','按原文类型选择加工路径',planProcessingAttr('workflow'));
     more='<details class="pd-more"><summary>辅助工具</summary><div>'
       +(lsWrite()?workBtn('模板管理','ls-config'):'')

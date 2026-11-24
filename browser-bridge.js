@@ -9,7 +9,7 @@
 
   function activeWorker() {
     if (worker) return worker;
-    worker = new Worker('/materials-corpus-workbench/browser-worker.js?v=2e75356647b3');
+    worker = new Worker('/materials-corpus-workbench/browser-worker.js?v=da9a3a91523f');
     worker.onmessage = event => {
       const packet = event.data;
       const resolve = waiting.get(packet.id);
@@ -49,6 +49,15 @@
     }
     const body=req.method==='POST'?await req.text():'{}';
     if (body.length>24*1024*1024) return jsonResponse(413,{error:'请求超过 24 MiB'});
+    if(req.method==='POST' && url.pathname==='/api/curves/extract'){
+      try {
+        const {filename,contentBase64}=JSON.parse(body);
+        if(!filename || typeof contentBase64!=='string')throw Error('缺少图像名称或数据。');
+        const bytes=Uint8Array.from(atob(contentBase64),ch=>ch.charCodeAt(0));
+        const result=await window.curveExtractFile(new File([bytes],filename));
+        return jsonResponse(200,result);
+      } catch(error) { return jsonResponse(422,{error:error.message}); }
+    }
     const job=++id;
     const endpoint=activeWorker();
     const packet=await new Promise(resolve => {

@@ -7,7 +7,7 @@ let lastMeetingExpert = 'expert-a';
 
 const platformModules = [
   {key:'resources', title:'训练资源目录构建与统一管理', label:'训练资源目录', icon:'archive', routes:['resources','jobs']},
-  {key:'generation', title:'高质量训练数据生成与语料蒸馏', label:'数据生成与蒸馏', icon:'layers', routes:['generation','batches','batch-record','extraction','pipeline-work','quality-work','releases','runs','materials-tools']},
+  {key:'generation', title:'高质量训练数据生成与语料蒸馏', label:'数据生成与蒸馏', icon:'layers', routes:['generation','batches','batch-record','extraction','pipeline-work','quality-work','releases','runs','materials-tools','curve-work']},
   {key:'annotations', title:'领域专业思维链（CoT）精细化标注', label:'CoT 精细标注', icon:'nodes', routes:['annotations']},
   {key:'benchmarks', title:'专家在环（HITL）大模型评测基准构建系统', label:'HITL 评测基准', icon:'score', routes:['benchmarks','benchmark-work','evaluation-desk']}
 ];
@@ -274,5 +274,5 @@ document.addEventListener('click',event=>{
   openModal('使用帮助',`<div class="stack public-help"><p>岗位可在右上角切换，操作记录保存在当前浏览器。</p>
     <div class="actions"><a class="btn primary" href="/materials-corpus-workbench/quickstart.pdf" target="_blank" rel="noopener">简明使用说明（PDF）</a><a class="btn" href="/materials-corpus-workbench/manual.pdf" target="_blank" rel="noopener">详细使用说明（PDF）</a><a class="btn" href="/materials-corpus-workbench/roles.pdf" target="_blank" rel="noopener">岗位权限清单（PDF）</a></div>
     <div class="actions"><a href="/materials-corpus-workbench/practice-files.zip" download="科研语料操作材料.zip">下载科研语料操作材料</a></div>
-    <h3>操作视频</h3><div class="actions"><a class="btn primary" href="/materials-corpus-workbench/crystal-tutorial.html" target="_blank" rel="noopener">碳化硅晶体生长</a><a class="btn" href="/materials-corpus-workbench/research-tutorial.html" target="_blank" rel="noopener">双相钢文献科研案例</a></div></div>`);
+    <h3>操作视频</h3><div class="actions"><a class="btn primary" href="./platform-tour-curves.mp4" target="_blank" rel="noopener">平台功能讲解（含曲线识别）</a><a class="btn" href="./platform-tour-curves.mp4#t=222.347" target="_blank" rel="noopener">从曲线识别开始观看</a><a class="btn" href="/materials-corpus-workbench/crystal-tutorial.html" target="_blank" rel="noopener">碳化硅晶体生长</a><a class="btn" href="/materials-corpus-workbench/research-tutorial.html" target="_blank" rel="noopener">双相钢文献科研案例</a></div></div>`);
 });

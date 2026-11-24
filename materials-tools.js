@@ -50,7 +50,7 @@ function renderMaterialsTools(){
  const shelves=materialToolGroups.map(([name,family,entries])=>'<section class="tools-shelf" data-tool-family="'+family+'"><header><h2>'+name+'</h2></header>'+
  entries.map(([key,title,desc,action])=>'<article class="tool-row">'+materialToolIcon(key)+'<div class="material-tool-copy"><h3>'+title+'</h3><p>'+desc+'</p></div>'+
  (['text','paper','custom'].includes(key)&&!writer?'<span class="biz-role">数据管理员办理</span>':'<button type="button" class="btn" data-material-tool="'+key+'">'+action+'</button>')+'</article>').join('')+'</section>').join('');
- return sectionHead('','文献与分子工具','',workBtn('原文资源库','nav','resources')+workBtn('抽取任务列表','nav','extraction'))+'<div class="tools-groups">'+shelves+'</div>';
+ return sectionHead('','文献与分子工具','',workBtn('科学曲线识别','nav','curve-work')+workBtn('原文资源库','nav','resources')+workBtn('抽取任务列表','nav','extraction'))+'<div class="tools-groups">'+shelves+'</div>';
 }
 let materialResult=null;
 function materialsOfferResult(title,record,source,evidence=null){

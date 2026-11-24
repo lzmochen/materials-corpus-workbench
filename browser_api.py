@@ -10,6 +10,7 @@ from pathlib import Path
 import corpus_topics
 import distillation
 import expert
+import curve_records
 import research_case
 import guide_contrast
 import quality_work
@@ -27,7 +28,7 @@ import browser_media
 
 DATABASE = '/visitor.sqlite3'
 MEMBERS = {name: (display, role) for name, display, role in MEETING_MEMBERS}
-MODULES = (research_case, quality_work, pipeline_work, benchmark_work, corpus_topics, guide_standards, guide_eval, guide_contrast, distillation, lineage,
+MODULES = (curve_records, research_case, quality_work, pipeline_work, benchmark_work, corpus_topics, guide_standards, guide_eval, guide_contrast, distillation, lineage,
            production, expert, service, luoshu_config, luoshu)
 
 

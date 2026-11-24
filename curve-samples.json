@@ -1,0 +1,78 @@
+[
+  {
+    "id": "stress",
+    "title": "双相钢退火试样应力–应变曲线",
+    "filename": "curve-stress.png",
+    "roi": {
+      "left": 112,
+      "top": 86,
+      "right": 900,
+      "bottom": 490
+    },
+    "axes": {
+      "x": {
+        "label": "Strain (%)",
+        "min": 0,
+        "max": 20,
+        "scale": "linear"
+      },
+      "y": {
+        "label": "Stress (MPa)",
+        "min": 0,
+        "max": 1600,
+        "scale": "linear"
+      }
+    },
+    "legend": [
+      {
+        "name": "Anneal A",
+        "color": "#14549c",
+        "side": "left"
+      },
+      {
+        "name": "Anneal B",
+        "color": "#af5030",
+        "side": "left"
+      }
+    ],
+    "sourceNote": "合成教学示例，供验证曲线识别与人工校核。"
+  },
+  {
+    "id": "polarization",
+    "title": "耐蚀钢循环动电位极化曲线",
+    "filename": "curve-polarization.png",
+    "roi": {
+      "left": 112,
+      "top": 86,
+      "right": 900,
+      "bottom": 490
+    },
+    "axes": {
+      "x": {
+        "label": "Current density (A/cm²)",
+        "min": 1e-08,
+        "max": 0.01,
+        "scale": "log"
+      },
+      "y": {
+        "label": "Potential (V)",
+        "min": -0.8,
+        "max": 0.4,
+        "scale": "linear"
+      }
+    },
+    "legend": [
+      {
+        "name": "Surface A",
+        "color": "#14549c",
+        "side": "left"
+      },
+      {
+        "name": "Surface B",
+        "color": "#af5030",
+        "side": "left"
+      }
+    ],
+    "sourceNote": "合成教学示例，供验证曲线识别与人工校核。"
+  }
+]

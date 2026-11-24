@@ -2,7 +2,7 @@
 
 const workPages = {
   home:['工作台','home'], workflow:['全流程办理','steps'], research:['双相钢退火','book'], crystal:['碳化硅晶体生长','book'],
-  'materials-tools':['文献与分子工具','layers'], 'function-index':['业务功能索引','book'], 'evaluation-desk':['评测指标与训练增益','chart'],
+  'curve-work':['科学曲线识别','chart'], 'materials-tools':['文献与分子工具','layers'], 'function-index':['业务功能索引','book'], 'evaluation-desk':['评测指标与训练增益','chart'],
   resources:['训练资源目录','folder'], extraction:['知识抽取与核查','sheets'], generation:['数据生成与蒸馏','rows'],
   batches:['语料批次','rows'], 'batch-record':['批次详情','rows'],
   'pipeline-work':['语料制备管线','steps'], 'quality-work':['质量与一致性','shield'], 'benchmark-work':['基准设计与制备','target'],
@@ -151,7 +151,7 @@ async function refresh() {
   if (!window.workspaceUser) return;
   const revision=++workView;
   const route=window.workspacePage;
-  const views={home:renderWorkspaceHome,'function-index':renderFunctionIndex,'materials-tools':renderMaterialsTools,'evaluation-desk':renderEvaluationDesk,workflow:renderCaseTrail,research:renderResearchCase,crystal:renderResearchCase,resources:renderWorkResources, extraction:renderLuoshu, generation:renderProductionDesk, batches:renderProductionBatches, 'batch-record':renderProductionBatchRecord, annotations:renderAnnotations,
+  const views={home:renderWorkspaceHome,'function-index':renderFunctionIndex,'curve-work':()=>window.curveWorkbench.render(),'materials-tools':renderMaterialsTools,'evaluation-desk':renderEvaluationDesk,workflow:renderCaseTrail,research:renderResearchCase,crystal:renderResearchCase,resources:renderWorkResources, extraction:renderLuoshu, generation:renderProductionDesk, batches:renderProductionBatches, 'batch-record':renderProductionBatchRecord, annotations:renderAnnotations,
     'quality-work':renderQualityWork, 'pipeline-work':renderPipelineWork, 'benchmark-work':renderBenchmarkWork,
     benchmarks:renderBenchmarks, releases:renderServiceReleases,runs:renderServiceRuns,jobs:renderWorkJobs,audit:renderWorkAudit,accounts:renderWorkAccounts};
   try {
@@ -462,6 +462,11 @@ async function handleWorkAction(action,el) {
     case 'home-extraction': return openLuoshuTask(id);
     case 'home-feedback': return openFeedbackRecord(id);
     case 'work-extraction-create': return createLuoshuTask(id||'');
+    case 'resource-curve': {
+      const [resourceId,versionId]=id.split('|');
+      window.curveOpenSource={resourceId,versionId};closeModal();
+      return navigate('curve-work');
+    }
     case 'drawing-preview': return showDrawing(id);
     case 'drawing-line': return showDrawingLine(id);
     case 'home-annotation': return openAnnotationRecord(id);
