@@ -51,15 +51,16 @@
     }
     return {pointTotal,pointCorrect,legendTotal,legendCorrect};
   }
-  async function identify(file){
+  async function identify(file,batch=null,last=false){
     const start=performance.now(), img=await createImageBitmap(file);
     const width=img.width,height=img.height;
     if(width*height>16000000){img.close();throw Error('图像超过一千六百万像素，请先裁出图表区域。');}
     const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
     const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);img.close();
     const image=ctx.getImageData(0,0,width,height);
-    const ocr=await CurveLabels.readText(canvas);
+    const ocr=await CurveLabels.readText(canvas,undefined,batch);
     const result=CurveOperator.extract(image,ocr,file.name);
+    if(last && batch)await batch.close();
     return {...result,seconds:(performance.now()-start)/1000};
   }
   window.curveExtractFile = identify;
@@ -72,6 +73,7 @@
       const report=f.querySelector('[data-cb-results]'), status=f.querySelector('[data-cb-status]');
       const buttons=[...f.querySelectorAll('button')];
       buttons.forEach(b=>b.disabled=true);report.replaceChildren();
+      const batch=CurveLabels.createOCRBatch();
       try{
         let files=[...f.elements.images.files],truth={};
         if(demo){
@@ -83,7 +85,7 @@
           if(!f.isConnected)return;
           status.textContent='正在识别 '+(i+1)+' / '+files.length+' · '+file.name;
           let row;
-          try { row=await identify(file); }
+          try { row=await identify(file,batch,i===files.length-1); }
           catch(e){ row={filename:file.name,series:[],width:0,height:0,error:e.message}; }
           if(Object.hasOwn(truth,file.name)){
             const ref=truth[file.name];
@@ -99,7 +101,9 @@
         report.innerHTML=workTable(['图像','曲线 / 点数','处理耗时','识读状态'],rows.map(r=>[safe(r.filename),r.error?'—':r.series.length+' / '+r.series.reduce((n,s)=>n+s.points.length,0),r.error?'—':r.seconds.toFixed(2)+' 秒',safe(r.error||r.warnings.join(' ')||'已生成候选')]))+
           '<div class="stack"><p>数据点符合率 '+rate(totals.pointCorrect,totals.pointTotal)+'　图例对应正确率 '+rate(totals.legendCorrect,totals.legendTotal)+'</p><details><summary>评估口径与招标指标</summary><p>按参考图形颜色一对一匹配曲线，在对角线 1.2% 距离内匹配未占用的最近点。物理坐标各非零分量的绝对百分比误差均值小于 10% 计为符合；缺失识别计为未通过。图例须同时匹配曲线颜色和文字。耗时包含图片解码、OCR 与点集结构化。</p><p>约定测试集的目标为数据点符合率不低于 80%、图例对应正确率大于 90%、批量平均耗时小于 3 秒/图。教学样例仅用于核对操作及计算方式。</p></details><button type="button" class="btn" data-cb-out>下载批量结果与评估明细</button></div>';
         report.querySelector('[data-cb-out]').onclick=()=>download({images:rows,totals},'曲线批量识别与评估.json');
-      }catch(e){status.textContent=e.message;}finally{delete f.dataset.busy;buttons.forEach(b=>b.disabled=false);}
+      }catch(e){status.textContent=e.message;}finally{
+        try { await batch.close(); } finally { delete f.dataset.busy;buttons.forEach(b=>b.disabled=false); }
+      }
     };
     f.onsubmit=e=>{e.preventDefault();run(false);};f.querySelector('[data-cb-demo]').onclick=()=>run(true);
   }

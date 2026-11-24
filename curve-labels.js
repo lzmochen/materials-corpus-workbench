@@ -200,7 +200,7 @@
     return {...line,text:offset>=0?line.text.slice(offset):content.map(w=>w.text).join(' '),words:content,bbox:{x:left,y:top,width:right-left,height:bottom-top}};
   }
   let tessLoader=null;
-  async function browserOCR(canvas,roi) {
+  async function loadOCRWorker() {
     const base=new URL('runtime/ocr/',site).href;
     if(!globalThis.Tesseract) {
       if(!tessLoader) tessLoader=new Promise((ok,no)=>{
@@ -210,11 +210,28 @@
       });
       await tessLoader;
     }
-    const worker=await Tesseract.createWorker('chi_sim+eng',1,{
+    return Tesseract.createWorker('chi_sim+eng',1,{
       workerPath:base+'worker.min.js',corePath:base+'tesseract-core-lstm.wasm.js',langPath:base,workerBlobURL:false
     });
+  }
+  function createOCRBatch() {
+    let pending=null;
+    return {
+      acquire() { return pending || (pending=loadOCRWorker()); },
+      async close() {
+        const promise=pending;
+        pending=null;
+        const worker=promise && await promise.catch(()=>null);
+        if(worker)await worker.terminate();
+      }
+    };
+  }
+  async function browserOCR(canvas,roi,batch) {
+    const session=batch||createOCRBatch();
     try {
-      await worker.setParameters({tessedit_pageseg_mode:'11'});
+      const worker=await session.acquire();
+      // Tick patches restrict the alphabet. Restore normal text for the next image.
+      await worker.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:''});
       const scale=Math.min(2,2200/Math.max(canvas.width,canvas.height));
       const copy=document.createElement('canvas');
       copy.width=Math.max(1,Math.round(canvas.width*scale)); copy.height=Math.max(1,Math.round(canvas.height*scale));
@@ -226,11 +243,14 @@
       const lines=(result.data.lines||[]).filter(s=>s.text?.trim()).map(s=>cleanRecognizedLine({...convert(s),words:(s.words||[]).map(convert)})).filter(Boolean);
       lines.push(...await readTickPatches(worker,canvas,roi,lines));
       return {engine:'Tesseract LSTM',lines,warning:lines.length?'':'未识读到文字，请补录刻度或图例。'};
-    } finally { await worker.terminate(); }
+    } catch (err) {
+      if(batch)await session.close();
+      throw err;
+    } finally { if(!batch)await session.close(); }
   }
-  async function readText(canvas,roi) {
+  async function readText(canvas,roi,batch) {
     try {
-      if(document.querySelector('script[src*="browser-bridge"]'))return await browserOCR(canvas,roi);
+      if(document.querySelector('script[src*="browser-bridge"]'))return await browserOCR(canvas,roi,batch);
       const data=canvas.toDataURL('image/png').split(',')[1];
       const response=await fetch('/api/curves/ocr',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'curve.png',contentBase64:data})});
       if(!response.ok){const detail=await response.json().catch(()=>({}));throw Error(detail.error||'图表文字识别服务暂不可用');}
@@ -493,5 +513,5 @@
     else if(legends.some(l=>l.seriesId===null))warnings.push('部分图例与曲线尚未唯一配对，请按原图核对。');
     return {axes,legends,legendBoxes:legends.map(l=>l.bbox),warnings};
   }
-  globalThis.CurveLabels={detectPanels,detectPlot,cropPanel,readText,analyze};
+  globalThis.CurveLabels={detectPanels,detectPlot,cropPanel,readText,createOCRBatch,analyze};
 })();
