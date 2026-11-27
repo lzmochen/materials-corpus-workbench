@@ -1345,14 +1345,16 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const versionCount=versions.filter(([,count])=>count>0).length;
     const training=counts['模型训练'] || 0, evaluation=counts['评测留出'] || 0;
     const scope=cfg.assetValues?.scope || {};
+    const explicitProgress=Number.isFinite(scope.progress);
+    const explicitRemaining=Number.isSafeInteger(scope.remaining);
     return {
-      uses,versions,breakdowns,customized,explicitProgress:scope.progress!==undefined,
+      uses,versions,breakdowns,customized,explicitProgress,
       operands:{parsed,reserve,remaining,training,evaluation,versionCount,latest,records:rows.length},
       builtIn:{
-        parsed:{icon:'book',value:parsed/10000,unit:'万篇',attrs:kv('measure','parsed'),help:'已纳入首期资产台账，可查看分类与原文样例'},
-        reserve:{icon:'archive',value:reserve/10000,unit:'万篇',attrs:kv('measure','reserve'),help:'包含首期已解析内容，按资料来源归集'},
-        progress:{icon:'pie',value:scope.progress??progress,unit:'%',precision:scope.progress===undefined?1:undefined,meter:true,help:scope.progress===undefined?'剩余 '+homeWan(remaining)+' 万篇待解析':'手填展示值'},
-        remaining:{icon:'clock',value:(scope.remaining??remaining)/10000,unit:'万篇',help:scope.remaining===undefined?'同一批次总储备量与已解析量之差':'手填展示值'},
+        parsed:{icon:'book',value:parsed/10000,unit:'万篇',attrs:kv('measure','parsed'),help:scope.parsed===undefined?'已纳入首期资产台账，可查看分类与原文样例':'首页配置的已解析量，可下钻至原文样例'},
+        reserve:{icon:'archive',value:reserve/10000,unit:'万篇',attrs:kv('measure','reserve'),help:scope.reserve===undefined?'包含首期已解析内容，按资料来源归集':'首页配置的总储备量，包含已解析内容'},
+        progress:{icon:'pie',value:explicitProgress?scope.progress:progress,unit:'%',precision:explicitProgress?undefined:1,meter:true,help:explicitProgress?'手填展示值':'剩余 '+homeWan(remaining)+' 万篇待解析'},
+        remaining:{icon:'clock',value:(explicitRemaining?scope.remaining:remaining)/10000,unit:'万篇',help:explicitRemaining?'手填展示值':'同一批次总储备量与已解析量之差'},
         training:{icon:'layers',value:training/10000,unit:'万篇',attrs:mapAttrs('use','模型训练'),help:'已解析资料中用于模型训练的内容'},
         evaluation:{icon:'file',value:evaluation/10000,unit:'万篇',attrs:mapAttrs('use','评测留出'),help:'已解析资料中留作独立评测的内容'},
         versionCount:{icon:'layers',value:versionCount,unit:'个',help:'统计已有解析内容的版本'},
