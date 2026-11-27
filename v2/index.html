@@ -135,7 +135,13 @@
   overflow-wrap:anywhere;
 }
 .ax-home .ax-donut {background:conic-gradient(var(--ax-chart-0) var(--ax-share),var(--ax-chart-3) 0)}
+.ax-home .ax-donut .ax-donut-long {font-size:clamp(12px,1.4cqi,17px);text-align:center}
 .ax-home .ax-home-config-link {text-decoration:none}
+.ax-home .ax-quantity-note {
+  display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;padding:10px 14px;
+  border:1px solid var(--ax-line);border-radius:8px;background:var(--ax-faint);color:var(--ax-muted)
+}
+.ax-home .ax-quantity-note .ax-ico {width:18px;height:18px;min-width:18px;color:var(--ax-green);margin-top:3px}
 .ax-home .ax-block-title {margin:0 0 9px;font-size:21px}
 .ax-home .ax-bottom:not(:last-child) {margin-bottom:16px}
 .ax-home .ax-kpis[data-count="1"] {grid-template-columns:minmax(0,1fr)}
@@ -295,6 +301,12 @@
   .ax-use-metrics[data-count="3"] {grid-template-columns:repeat(3,minmax(0,1fr))}
   .ax-use-metrics:not([data-count="1"],[data-count="2"],[data-count="3"]) {
     grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+}
+@container asset-use (520px <= width <= 640px) {
+  .ax-use-metrics:not([data-count="1"],[data-count="2"],[data-count="3"]) .ax-use-metric-label {
+    align-items:flex-start;
+    min-height:2lh;
   }
 }
 @container asset-use (min-width:720px) {
@@ -553,6 +565,32 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
 .hc-editor .hc-metric-tools button:disabled{opacity:.55;cursor:default}
 .hc-metric-toolbar p{margin-top:6px;font-size:14px;color:var(--hc-muted)}
 .hc-list{padding:0 15px 6px}
+.hc-editor[data-asset-active="true"] .hc-display-panel{order:-1}
+.hc-assets{display:grid;gap:8px;padding:0 0 7px}
+.hc-assets-help{color:var(--hc-muted);font-size:14px;line-height:1.55}
+.hc-asset-section{border:1px solid var(--hc-line);border-radius:7px;min-width:0}
+.hc-asset-section>summary{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:9px 11px;min-height:42px;cursor:pointer;font-weight:650;list-style:none}
+.hc-asset-section>summary::-webkit-details-marker{display:none}
+.hc-asset-section>summary:hover{background:#f4f8f5}
+.hc-asset-section[open]>summary{background:#f4f8f5;border-bottom:1px solid var(--hc-line);border-radius:7px 7px 0 0}
+.hc-asset-section>summary small{margin-left:auto;color:var(--hc-muted);font-size:13px;font-weight:450;white-space:nowrap}
+.hc-asset-chevron{display:block;width:7px;height:7px;flex:none;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+.hc-asset-section[open] .hc-asset-chevron{transform:rotate(225deg) translate(-1px,-1px)}
+.hc-asset-body{padding:0 11px}
+.hc-asset-head,.hc-asset-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,0.8fr);align-items:center;gap:0 10px}
+.hc-asset-head{padding:6px 0 4px;border-bottom:1px solid #e4ece7;color:var(--hc-muted);font-size:13px}
+.hc-asset-row{padding:6px 0;border-bottom:1px solid #e4ece7}
+.hc-asset-row label{font-size:14px;font-weight:620;line-height:1.35}
+.hc-asset-row label small{display:block;color:var(--hc-muted);font-size:12px;font-weight:450;margin-top:2px}
+.hc-asset-field{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 2.5em;align-items:center;gap:6px;color:var(--hc-muted);font-size:14px}
+.hc-asset-field input{min-width:0;width:100%;min-height:35px;border:1px solid #bfcfc5;border-radius:5px;background:#fff;padding:5px 6px;color:var(--hc-ink);font:inherit;font-weight:650;font-variant-numeric:tabular-nums;text-align:right;appearance:textfield}
+.hc-asset-field input::placeholder{color:#4f6860;opacity:1;font-weight:450}
+.hc-asset-field input::-webkit-inner-spin-button{appearance:none;margin:0}
+.hc-asset-field input[aria-invalid="true"]{border-color:#b1563b}
+.hc-asset-row [data-hc-asset-error],.hc-asset-body .hc-asset-issue{grid-column:1/-1;margin:5px 0 0;color:#88351e;font-size:13px}
+.hc-asset-section[data-asset-invalid="true"]>summary small{color:#88351e}
+.hc-asset-footer{display:flex;align-items:center;justify-content:space-between;gap:4px 9px;flex-wrap:wrap;padding:4px 0;font-size:13px;color:var(--hc-muted)}
+.hc-editor .hc-asset-footer .hc-text:disabled{color:var(--hc-muted);cursor:default;text-decoration:none}
 .hc-row{min-width:0;display:grid;grid-template-columns:22px minmax(0,1fr) max-content;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid #e1eae4}
 .hc-row:last-child{border-bottom:0}
 .hc-row input[type="checkbox"]{width:19px;height:19px;accent-color:var(--hc-green);cursor:pointer}
@@ -920,12 +958,15 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   };
   const metricLimit = 8;
   const metricValueMax = 1e12;
+  const assetBreakdowns = {kind:'资料类型',family:'材料门类',topic:'研究专题',use:'语料用途',version:'版本分布'};
+  const assetScope = ['parsed','reserve','progress','remaining'];
   const publicPage = 'https://lzmochen.github.io/materials-corpus-workbench/v2/';
   const storageKey = () => 'ustb-home-layout-v1:' + V2.person().id;
   function defaults() {
     const config = {
       v:1, title:'数据资产总览看板', theme:'green', dimension:'kind', order:{}, hidden:{}, names:{},
-      custom:{metrics:{}, useMetrics:{}}, rules:{metrics:{}, useMetrics:{}}, limits:{metrics:0, useMetrics:0}
+      custom:{metrics:{}, useMetrics:{}}, rules:{metrics:{}, useMetrics:{}}, limits:{metrics:0, useMetrics:0},
+      assetValues:{}
     };
     for (const group of groupNames) {
       config.order[group] = Object.keys(catalog[group]);
@@ -968,12 +1009,91 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     if (Number.isInteger(input.precision)) rule.precision = Math.min(4,Math.max(0,input.precision));
     return rule;
   }
+  function assetOverrides(input, keys, scope = false) {
+    const values = new Map();
+    for (const key of keys) {
+      if (!input || !Object.hasOwn(input,key)) continue;
+      const value = input[key];
+      if (scope && key === 'progress') {
+        if (Number.isFinite(value) && value >= 0 && value <= 100) {
+          values.set(key,Math.round(value*100)/100);
+        }
+      } else if (Number.isSafeInteger(value) && value >= 0 && value <= metricValueMax) {
+        values.set(key,value);
+      }
+    }
+    return values;
+  }
+  function normalizeAssetValues(input) {
+    const values = {};
+    const scope = assetOverrides(input?.scope,assetScope,true);
+    if (scope.size) values.scope = Object.fromEntries(scope);
+    const rows = window.V2AssetData ?? [];
+    for (const group of Object.keys(assetBreakdowns)) {
+      const labels = new Set(rows.map(row=>row[group]));
+      const entries = assetOverrides(input?.[group],labels);
+      if (entries.size) values[group] = Object.fromEntries(entries);
+    }
+    return values;
+  }
+  function distributeAssetCounts(baseline, overrides, total) {
+    const unfilled = [...baseline].filter(([label])=>!overrides.has(label));
+    const fixed = [...overrides.values()].reduce((sum,value)=>sum+value,0);
+    const remaining = total-fixed;
+    if (!unfilled.length) return [...overrides];
+    const baselineTotal = unfilled.reduce((sum,[,weight])=>sum+weight,0);
+    const weightTotal = BigInt(baselineTotal || unfilled.length);
+    // Largest remainder allocates whole counts while preserving the exact total.
+    const shares = unfilled.map(([label,weight])=>{
+      const scaled = BigInt(remaining)*BigInt(baselineTotal ? weight : 1);
+      return {label,floor:Number(scaled/weightTotal),remainder:scaled%weightTotal};
+    });
+    const leftover = remaining-shares.reduce((sum,{floor})=>sum+floor,0);
+    const ranked = [...shares].sort((a,b)=>a.remainder===b.remainder ? 0 : a.remainder>b.remainder ? -1 : 1);
+    for (const share of ranked.slice(0,leftover)) share.floor++;
+    const assigned = new Map([...overrides,...shares.map(({label,floor})=>[label,floor])]);
+    return [...baseline.keys()].map(label=>[label,assigned.get(label)]);
+  }
+  function assetSnapshot(cfg, rows) {
+    const inputs = cfg.assetValues ?? {};
+    const breakdowns = Object.fromEntries(Object.keys(assetBreakdowns).map(group=>[group,[]]));
+    const issues = {};
+    const baselineParsed = rows.reduce((sum,row)=>sum+row.parsed,0);
+    const baselineReserve = rows.reduce((sum,row)=>sum+row.reserve,0);
+    const scope = assetOverrides(inputs.scope,rows.length ? assetScope : [],true);
+    let parsed = scope.get('parsed') ?? baselineParsed;
+    let reserve = scope.get('reserve') ?? baselineReserve;
+    if (parsed > reserve) {
+      issues.scope = '总储备量须大于或等于已解析量。';
+      parsed = baselineParsed;
+      reserve = baselineReserve;
+    }
+    let customized = scope.size > 0;
+    for (const group of Object.keys(assetBreakdowns)) {
+      const baseline = new Map();
+      for (const row of rows) {
+        const label = row[group];
+        baseline.set(label,(baseline.get(label) || 0)+row.parsed);
+      }
+      let overrides = assetOverrides(inputs[group],baseline.keys());
+      if (overrides.size) {
+        customized = true;
+        const sum = [...overrides.values()].reduce((total,value)=>total+value,0);
+        if (sum > parsed) issues[group] = '已填数量合计超过已解析量。';
+        else if (overrides.size === baseline.size && sum !== parsed) issues[group] = '本组全部填写时，数量合计须等于已解析量。';
+        if (issues[group]) overrides = new Map();
+      }
+      breakdowns[group] = !overrides.size && parsed === baselineParsed ? [...baseline] : distributeAssetCounts(baseline,overrides,parsed);
+    }
+    return {parsed,reserve,remaining:reserve-parsed,progress:reserve ? 100*parsed/reserve : null,breakdowns,issues,customized};
+  }
   function normalize(input) {
     const cfg = defaults();
     if (!input || input.v !== 1) return cfg;
     cfg.title = cleanText(input.title,40) || cfg.title;
     if (input.theme === 'blue') cfg.theme = 'blue';
     if (typeof input.dimension === 'string' && Object.hasOwn(catalog.dimensions,input.dimension)) cfg.dimension = input.dimension;
+    cfg.assetValues = normalizeAssetValues(input.assetValues);
     for (const group of metricGroups) {
       const entries = Object.entries(input.custom?.[group] ?? {}).filter(([id])=>/^custom-[a-z0-9-]{1,16}$/.test(id));
       for (const [id,title] of entries.slice(0,metricLimit)) {
@@ -1052,6 +1172,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
         changes[key][group] = cfg[key][group];
       }
     }
+    if (Object.keys(cfg.assetValues).length) changes.assetValues = cfg.assetValues;
     const bytes = new TextEncoder().encode(JSON.stringify(changes));
     return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   }
@@ -1083,6 +1204,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   }
   window.V2HomeConfig = {
     catalog,metricGroups,metricSources,metricSourceUnits,metricModes,metricLimit,metricValueMax,unitsFor,
+    assetBreakdowns,assetSnapshot,
     defaults,normalize,load,save,visible,label,defaultRule,addMetric,removeMetric,encode,decode,shareUrl
   };
 })();
@@ -1147,6 +1269,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   const esc = text => String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const fmt = value => Number(value).toLocaleString('zh-CN');
   const wan = value => +(value / 10000).toFixed(2);
+  const homeWan = value => (value / 10000).toLocaleString('zh-CN',{maximumFractionDigits:4});
   const dims = {kind:'资料类型',family:'材料门类',topic:'研究专题',use:'语料用途',version:'资源版本'};
   const icons = {
     settings:'<path d="M3 7h7m4 0h7M3 17h2m4 0h12"/><circle cx="12" cy="7" r="2"/><circle cx="7" cy="17" r="2"/>',
@@ -1198,42 +1321,42 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   function metadata(row){const {file,...meta}=row;return meta;}
   const ready=accessStore('readonly',s=>s.getAll()).then(rows=>{uploaded=rows.map(metadata);}).catch(()=>{storeError='浏览器离线存储不可用。请使用普通浏览窗口后再导入。';});
   const getSource=id=>[...seed,...uploaded].find(r=>r.id===id&&readable(r))||null;
-  const groups=(rows,dimension,measure='parsed')=>{
-    const grouped=new Map();
-    for(const r of rows)grouped.set(r[dimension],(grouped.get(r[dimension])||0)+r[measure]);
-    return [...grouped].sort((a,b)=>b[1]-a[1]);
-  };
   const mapAttrs=(d,v,measure='parsed')=>kv('dim',d)+' '+kv('v',v)+' '+kv('measure',measure);
   const drill=(d,v,measure)=>A.go('resources',{dim:d||'',v:v||'',measure:measure==='reserve'?'reserve':'parsed'});
 
 
   const visible = (cfg, group) => window.V2HomeConfig.visible(cfg, group);
   const homeLabel = (cfg, group, id) => esc(window.V2HomeConfig.label(cfg, group, id));
-  const metricFormat = (value, precision) => value === null ? '—' : value.toLocaleString('zh-CN', {
-    minimumFractionDigits:precision ?? 0, maximumFractionDigits:precision ?? 2
+  const metricFormat = (value, precision, maxPrecision = 2) => value === null ? '—' : value.toLocaleString('zh-CN', {
+    minimumFractionDigits:precision ?? 0, maximumFractionDigits:precision ?? maxPrecision
   });
 
-  function homeStatistics(rows){
-    const parsed=sum(rows,'parsed'),reserve=sum(rows,'reserve');
-    const uses=groups(rows,'use');
+  function homeAssetInputs(cfg){
+    const {defaults,assetSnapshot}=window.V2HomeConfig;
+    const rows=readableSeeds();
+    return {base:assetSnapshot(defaults(),rows),current:assetSnapshot(cfg,rows)};
+  }
+  function homeStatistics(rows,cfg){
+    const {parsed,reserve,remaining,progress,breakdowns,customized}=window.V2HomeConfig.assetSnapshot(cfg,rows);
+    const uses=[...breakdowns.use].sort((a,b)=>b[1]-a[1]);
     const counts=Object.fromEntries(uses);
-    const versions=groups(rows,'version').sort(([a],[b])=>b.localeCompare(a,'en',{numeric:true}));
+    const versions=[...breakdowns.version].sort(([a],[b])=>b.localeCompare(a,'en',{numeric:true}));
     const [latestVersion,latest]=versions[0] || ['',0];
-    const versionCount=versions.length;
+    const versionCount=versions.filter(([,count])=>count>0).length;
     const training=counts['模型训练'] || 0, evaluation=counts['评测留出'] || 0;
-    const remaining=reserve-parsed;
+    const scope=cfg.assetValues?.scope || {};
     return {
-      uses,versions,
+      uses,versions,breakdowns,customized,explicitProgress:scope.progress!==undefined,
       operands:{parsed,reserve,remaining,training,evaluation,versionCount,latest,records:rows.length},
       builtIn:{
-        parsed:{icon:'book',value:wan(parsed),unit:'万篇',attrs:kv('measure','parsed'),help:'已纳入首期资产台账，可查看分类与原文样例'},
-        reserve:{icon:'archive',value:wan(reserve),unit:'万篇',attrs:kv('measure','reserve'),help:'包含首期已解析内容，按资料来源归集'},
-        progress:{icon:'pie',value:reserve?100*parsed/reserve:null,unit:'%',precision:1,meter:true,help:'剩余 '+wan(remaining)+' 万篇待解析'},
-        remaining:{icon:'clock',value:wan(remaining),unit:'万篇',help:'同一批次总储备量与已解析量之差'},
-        training:{icon:'layers',value:wan(training),unit:'万篇',attrs:mapAttrs('use','模型训练'),help:'已解析资料中用于模型训练的内容'},
-        evaluation:{icon:'file',value:wan(evaluation),unit:'万篇',attrs:mapAttrs('use','评测留出'),help:'已解析资料中留作独立评测的内容'},
-        versionCount:{icon:'layers',value:versionCount,unit:'个',help:'按资源版本去重统计'},
-        latest:{icon:'archive',value:wan(latest),unit:'万篇',attrs:latestVersion?mapAttrs('version',latestVersion):'',help:latestVersion+' 已解析量'},
+        parsed:{icon:'book',value:parsed/10000,unit:'万篇',attrs:kv('measure','parsed'),help:'已纳入首期资产台账，可查看分类与原文样例'},
+        reserve:{icon:'archive',value:reserve/10000,unit:'万篇',attrs:kv('measure','reserve'),help:'包含首期已解析内容，按资料来源归集'},
+        progress:{icon:'pie',value:scope.progress??progress,unit:'%',precision:scope.progress===undefined?1:undefined,meter:true,help:scope.progress===undefined?'剩余 '+homeWan(remaining)+' 万篇待解析':'手填展示值'},
+        remaining:{icon:'clock',value:(scope.remaining??remaining)/10000,unit:'万篇',help:scope.remaining===undefined?'同一批次总储备量与已解析量之差':'手填展示值'},
+        training:{icon:'layers',value:training/10000,unit:'万篇',attrs:mapAttrs('use','模型训练'),help:'已解析资料中用于模型训练的内容'},
+        evaluation:{icon:'file',value:evaluation/10000,unit:'万篇',attrs:mapAttrs('use','评测留出'),help:'已解析资料中留作独立评测的内容'},
+        versionCount:{icon:'layers',value:versionCount,unit:'个',help:'统计已有解析内容的版本'},
+        latest:{icon:'archive',value:latest/10000,unit:'万篇',attrs:latestVersion?mapAttrs('version',latestVersion):'',help:latestVersion+' 已解析量'},
         latestShare:{icon:'pie',value:parsed?100*latest/parsed:null,unit:'%',precision:1,help:'最新版本 ÷ 全部已解析量'},
         trainEvalRatio:{icon:'trend',value:evaluation?training/evaluation:null,unit:'倍',precision:2,help:'模型训练语料量 ÷ 评测留出量'}
       }
@@ -1243,10 +1366,10 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const baseline=stats.builtIn[id];
     const rule=cfg.rules?.[group]?.[id];
     if(!rule||rule.mode==='default'){
-      if(id==='progress'&&visible(cfg,'metrics').includes('remaining')){
+      if(baseline?.value===null)return {...baseline,help:'分母为 0，暂无法计算'};
+      if(id==='progress'&&!stats.explicitProgress&&visible(cfg,'metrics').includes('remaining')){
         return {...baseline,help:'已解析内容占总储备量的比例'};
       }
-      if(baseline?.value===null)return {...baseline,help:'分母为 0，暂无法计算'};
       return baseline || {icon:'trend',value:null,unit:'',help:'待配置统计规则'};
     }
     const {mode,source,second,unit,precision}=rule;
@@ -1269,7 +1392,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     return {icon,value:raw/scale,unit,precision,help};
   }
   function metricValue(metric){
-    return '<strong>'+metricFormat(metric.value,metric.precision)+
+    return '<strong>'+metricFormat(metric.value,metric.precision,metric.unit==='万篇'?4:2)+
       (metric.value===null||!metric.unit?'':'<small>'+esc(metric.unit)+'</small>')+'</strong>';
   }
   function hero(stats,cfg){
@@ -1278,7 +1401,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const cards=ids.map((id,idx)=>{
       const metric=resolveMetric(cfg,'metrics',id,stats);
       const meter=metric.meter&&metric.value!==null?
-        '<span class="ax-meter" role="img" aria-label="储备解析进度 '+metricFormat(metric.value,1)+'%"><span style="width:'+metric.value+'%"></span></span>':'';
+        '<span class="ax-meter" role="img" aria-label="储备解析进度 '+metricFormat(metric.value,metric.precision)+'%"><span style="width:'+metric.value+'%"></span></span>':'';
       const content='<span class="ax-kpihead"><span>'+i(metric.icon)+homeLabel(cfg,'metrics',id)+'</span>'+(metric.attrs?i('arrow'):'')+
         '</span>'+metricValue(metric)+meter+'<span class="ax-kpisub">'+esc(metric.help)+'</span>';
       const cls='ax-kpi'+(idx===0?' ax-major':'');
@@ -1291,13 +1414,13 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   function panel(title,content,aside='',cls=''){
     return '<section class="ax-panel '+cls+'"><div class="ax-panelhead"><h2>'+title+'</h2>'+aside+'</div>'+content+'</section>';
   }
-  function composition(rows,cfg,selected){
+  function composition(stats,cfg,selected){
     const choices=visible(cfg,'dimensions');
     if(!choices.length)return '';
     const dimension=choices.includes(selected)?selected:choices.includes(cfg.dimension)?cfg.dimension:choices[0];
-    const bins=groups(rows,dimension),max=bins[0]?.[1]||1;
+    const bins=[...stats.breakdowns[dimension]].sort((a,b)=>b[1]-a[1]),max=bins[0]?.[1]||1;
     const tabs=choices.map(d=>button(homeLabel(cfg,'dimensions',d),'dimension',kv('dim',d)+' aria-pressed="'+(dimension===d)+'"','ax-tab')).join('');
-    const bars=bins.map(([label,count],idx)=>button('<span>'+esc(label)+'</span><span class="ax-track"><b style="width:'+Math.round(count/max*100)+'%;background:var(--ax-chart-'+(idx%5)+')"></b></span><strong>'+wan(count)+' <small>万篇</small></strong>'+i('right'),'drill',mapAttrs(dimension,label),'ax-bar')).join('');
+    const bars=bins.map(([label,count],idx)=>button('<span>'+esc(label)+'</span><span class="ax-track"><b style="width:'+Math.round(count/max*100)+'%;background:var(--ax-chart-'+(idx%5)+')"></b></span><strong>'+homeWan(count)+' <small>万篇</small></strong>'+i('right'),'drill',mapAttrs(dimension,label),'ax-bar')).join('');
     return panel(homeLabel(cfg,'blocks','distribution'),'<div class="ax-segments">'+tabs+'</div><div class="ax-bars">'+bars+'</div>','<span class="ax-muted">首期已解析量</span>');
   }
   function useMetricCards(stats,cfg){
@@ -1320,12 +1443,13 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     if(!ids.length)return '';
     const {uses,versions,operands:{parsed:total}}=stats;
     const percent=num=>total?+(num/total*100).toFixed(1):0;
-    const legend=uses.map(([key,num],idx)=>button('<b class="ax-dot" style="background:var(--ax-chart-'+(idx?3:0)+')"></b><span>'+esc(key)+'<small>'+wan(num)+' 万篇</small></span><strong>'+percent(num)+'%</strong>'+i('right'),'drill',mapAttrs('use',key),'ax-legend')).join('');
-    const versionCards=versions.map(([v,n])=>button('<span>'+esc(v)+'</span><b>'+wan(n)+' <small>万篇</small></b>','drill',mapAttrs('version',v),'ax-ver')).join('');
+    const legend=uses.map(([key,num],idx)=>button('<b class="ax-dot" style="background:var(--ax-chart-'+(idx?3:0)+')"></b><span>'+esc(key)+'<small>'+homeWan(num)+' 万篇</small></span><strong>'+percent(num)+'%</strong>'+i('right'),'drill',mapAttrs('use',key),'ax-legend')).join('');
+    const versionCards=versions.map(([v,n])=>button('<span>'+esc(v)+'</span><b>'+homeWan(n)+' <small>万篇</small></b>','drill',mapAttrs('version',v),'ax-ver')).join('');
     const useLabel=homeLabel(cfg,'details','uses');
     const share=percent(uses[0]?.[1]||0);
+    const totalText=homeWan(total);
     const content={
-      uses:'<div class="ax-use-section ax-use-purpose"><h3>'+useLabel+'</h3><div class="ax-usegrid"><div class="ax-donut" style="--ax-share:'+share+'%" role="img" aria-label="'+esc(uses[0]?.[0])+' '+share+'%"><div><strong>'+wan(total)+'</strong><small>万篇</small></div></div><div class="ax-legends">'+legend+'</div></div></div>',
+      uses:'<div class="ax-use-section ax-use-purpose"><h3>'+useLabel+'</h3><div class="ax-usegrid"><div class="ax-donut" style="--ax-share:'+share+'%" role="img" aria-label="首期已解析量 '+totalText+' 万篇，'+esc(uses[0]?.[0])+' '+share+'%"><div><strong'+(totalText.length>6?' class="ax-donut-long"':'')+'>'+totalText+'</strong><small>万篇</small></div></div><div class="ax-legends">'+legend+'</div></div></div>',
       versions:'<div class="ax-use-section ax-use-versions"><h3>'+homeLabel(cfg,'details','versions')+'</h3><div class="ax-vers">'+versionCards+'</div></div>',
       indicators:ids.includes('indicators')?useMetricCards(stats,cfg):''
     };
@@ -1363,10 +1487,10 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     return cells.length?panel(homeLabel(cfg,'blocks','actions'),'<div class="ax-work" data-count="'+cells.length+'">'+cells.join('')+'</div>'):'';
   }
   function homeMarkup(cfg,rows,tools,dimension){
-    const stats=homeStatistics(rows);
+    const stats=homeStatistics(rows,cfg);
     const renderers={
       metrics:()=>hero(stats,cfg),
-      distribution:()=>composition(rows,cfg,dimension),
+      distribution:()=>composition(stats,cfg,dimension),
       uses:()=>usesAndVersions(stats,cfg),
       actions:()=>workLinks(cfg),
       banks:()=>banks(cfg),
@@ -1383,7 +1507,8 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       }else body+=block.html;
     }
     if(!body)body='<p class="ax-empty">当前方案没有可展示的模块。</p>';
-    return '<div class="ax ax-home" data-theme="'+(cfg.theme==='blue'?'blue':'green')+'">'+title(esc(cfg.title),'从首期已解析内容出发，按资料类型、材料门类或研究专题查看资产。',tools)+body+'</div>';
+    const note=stats.customized?'<p class="ax-quantity-note">'+i('info')+'<span>首页按配置展示资产数量。下钻后可查看原台账样例及其统计量。</span></p>':'';
+    return '<div class="ax ax-home" data-theme="'+(cfg.theme==='blue'?'blue':'green')+'">'+title(esc(cfg.title),'从首期已解析内容出发，按资料类型、材料门类或研究专题查看资产。',tools)+note+body+'</div>';
   }
   function paintHome(el,params={}){
     if(!can('view')&&can('upload')){paintLedger(el,{scope:'imports'});return;}
@@ -1392,8 +1517,11 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const rows=readableSeeds();
     if(!rows.length){el.innerHTML='<div class="ax ax-empty">当前人员暂无可查看资源。</div>';return;}
     const cfg=window.V2HomeConfig.load(params.layout);
-    const editHref=params.layout?'#home-config?'+new URLSearchParams({layout:window.V2HomeConfig.encode(cfg)}):'#home-config';
-    const tools=badge('模拟数据')+'<a class="ax-btn ax-home-config-link" href="'+esc(editHref)+'">'+i('settings')+'配置首页</a>'+button('进入资源台账 '+i('arrow'),'drill','','ax-btn ax-primary');
+    const layout=params.layout?{layout:window.V2HomeConfig.encode(cfg)}:{};
+    const editHref=params.layout?'#home-config?'+new URLSearchParams(layout):'#home-config';
+    const valuesHref='#home-config?'+new URLSearchParams({section:'assetValues',...layout});
+    const tools=badge('模拟数据')+'<a class="ax-btn ax-home-config-link" href="'+esc(valuesHref)+'">'+i('table')+'修改资产数量</a>'+
+      '<a class="ax-btn ax-home-config-link" href="'+esc(editHref)+'">'+i('settings')+'配置首页</a>'+button('进入资源台账 '+i('arrow'),'drill','','ax-btn ax-primary');
     function render(dimension){
       el.innerHTML=homeMarkup(cfg,rows,tools,dimension);
       bind(el,{dimension:b=>render(b.dataset.dim)});
@@ -1666,7 +1794,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   mount('home',paintHome);
   mount('resources',(el,params)=>{ready.then(()=>{if(el.isConnected)paintLedger(el,params);});});
   mount('efficiency',efficiency);
-  window.V2Assets={getSource,getEvidence,preview,ready,renderHomePreview};
+  window.V2Assets={getSource,getEvidence,preview,ready,renderHomePreview,homeAssetInputs};
 })();
 
 </script>
@@ -1675,10 +1803,14 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   'use strict';
   const App = window.V2;
   const groups = {
-    blocks: '首页模块', metrics: '指标卡', dimensions: '资产分类',
+    assetValues: '资产数量', blocks: '首页模块', metrics: '指标卡', dimensions: '资产分类',
     useMetrics: '用途与版本指标', details: '用途与版本模块', actions: '功能入口', banks: '资源库'
   };
   const parents = {metrics:'metrics', dimensions:'distribution', details:'uses', useMetrics:'uses', actions:'actions', banks:'banks'};
+  const assetScopeLabels = {
+    parsed:'首期已解析量', reserve:'总储备量', progress:'储备解析进度', remaining:'待解析量'
+  };
+  const assetUseMetrics = {'模型训练':'training', '评测留出':'evaluation'};
   const defaultMetricNotes = {
     parsed:'汇总首期台账中可查看资料的已解析篇数。',
     reserve:'汇总台账中可查看资料的储备篇数，包含已解析资料。',
@@ -1698,10 +1830,12 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const settings = window.V2HomeConfig;
     const esc = App.esc;
     let draft = settings.load(params.layout);
-    let active = 'blocks';
+    let active = Object.hasOwn(groups,params.section) ? params.section : 'assetValues';
     let openMetric = '';
     let changed = false;
     const invalidValues = new Map();
+    const invalidAssets = new Map();
+    const assetExpanded = new Set(['scope','use']);
     const groupKeys = Object.keys(groups);
     const visible = (g,id) => !draft.hidden[g].includes(id);
     const visibleIds = g => draft.order[g].filter(id => visible(g,id));
@@ -1742,7 +1876,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       '<label class="hc-wide">首页标题<input name="home-title" maxlength="40" autocomplete="off"></label>'+
       '<label>页面配色<select name="home-theme"><option value="green">平台绿色</option><option value="blue">校方科技蓝</option></select></label>'+
       '<label>默认资产分类<select name="home-dimension"></select></label></div></section>'+
-      '<section class="hc-panel"><div class="hc-panel-head"><h2>展示内容</h2><button type="button" class="hc-text" data-hc-act="reset">恢复默认配置</button></div>'+
+      '<section class="hc-panel hc-display-panel"><div class="hc-panel-head"><h2>展示内容</h2><button type="button" class="hc-text" data-hc-act="reset">恢复默认配置</button></div>'+
       '<div class="hc-groups" role="group" aria-label="配置项目类别">'+groupButtons+'</div>'+
       '<div class="hc-list-title"><h3></h3><span></span></div><div class="hc-parent-note" hidden></div>'+
       '<div class="hc-metric-toolbar" hidden></div>'+
@@ -1843,12 +1977,116 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
         '<button type="button" class="hc-btn" data-hc-act="add-metric" '+(count>=settings.metricLimit?'disabled':'')+'>新增指标</button></div>'+
         '<p>'+(count>=settings.metricLimit?'已达到 '+settings.metricLimit+' 个自定义指标上限。':'按勾选后的顺序展示，可通过上移、下移调整。')+'</p>';
     }
+    const assetInputs = () => window.V2Assets.homeAssetInputs(draft);
+    const assetKey = (group,key) => group+'/'+key;
+    const progressAsset = (group,key) => group==='scope'&&key==='progress';
+    const assetDisplay = (value,progress=false) => value==null ? '' : String(progress?Number(value.toFixed(2)):value/10000);
+    const unitForAsset = (group,key) => progressAsset(group,key)?'%':'万篇';
+    const scopeIssueText = '资产数量有误，请检查各组提示。';
+    function assetError(group,key){
+      return progressAsset(group,key) ? '请输入 0 至 100 的数值，最多保留 2 位小数。' :
+        '请输入 0 至 '+(settings.metricValueMax/10000).toLocaleString('zh-CN')+' 的数值，最多保留 4 位小数。';
+    }
+    function assetSection(input) {
+      return input.closest('[data-hc-asset-section]').dataset.hcAssetSection;
+    }
+    function drawAssetValues() {
+      const {base}=assetInputs();
+      const names=settings.assetBreakdowns;
+      const sections=[['scope','核心指标'],['use',names.use],['version',names.version],
+        ['kind',names.kind],['family',names.family],['topic',names.topic]];
+      q('.hc-list').innerHTML='<div class="hc-assets">'+
+        '<p class="hc-assets-help">直接填写首页数值。留空的分类、用途和版本会按原比例分配已解析量。设有单项取值规则的指标卡仍优先使用其规则。</p>'+
+        sections.map(([group,title])=>{
+          const items=group==='scope'?Object.entries(assetScopeLabels):(base.breakdowns[group]||[]).map(([key])=>[key,key]);
+          if(!items.length)return '';
+          return '<details class="hc-asset-section" data-hc-asset-section="'+group+'" '+(assetExpanded.has(group)?'open':'')+'>'+
+            '<summary><span>'+esc(title)+'</span><small data-hc-asset-summary></small><span class="hc-asset-chevron" aria-hidden="true"></span></summary>'+
+            '<div class="hc-asset-body"><div class="hc-asset-head"><span>指标</span><span>首页数值</span></div>'+
+            items.map(([key,label],index)=>{
+              const id='hc-asset-'+group+'-'+index;
+              const progress=progressAsset(group,key);
+              const value=draft.assetValues[group]?.[key];
+              const raw=invalidAssets.get(assetKey(group,key));
+              const metric=group==='scope'?key:group==='use'?assetUseMetrics[key]:null;
+              const rule=metric&&draft.rules.metrics[metric];
+              return '<div class="hc-asset-row"><label for="'+id+'">'+esc(label)+
+                (rule?'<small>已设单项规则</small>':group==='scope'&&(key==='progress'||key==='remaining')?'<small>留空按总量计算</small>':'')+'</label>'+
+                '<span class="hc-asset-field"><input id="'+id+'" data-hc-asset-value="'+esc(key)+'" type="number" inputmode="decimal" '+
+                'min="0" max="'+(progress?100:settings.metricValueMax/10000)+'" step="'+(progress?'0.01':'0.0001')+'" '+
+                'aria-describedby="'+id+'-unit '+id+'-err" value="'+esc(raw??assetDisplay(value,progress))+'">'+
+                '<span id="'+id+'-unit">'+unitForAsset(group,key)+'</span></span>'+
+                '<small id="'+id+'-err" data-hc-asset-error hidden>'+assetError(group,key)+'</small></div>';
+            }).join('')+
+            '<p class="hc-asset-issue" data-hc-asset-issue aria-live="polite" hidden></p>'+
+            '<footer class="hc-asset-footer"><span data-hc-asset-total></span><button type="button" class="hc-text" data-hc-asset-reset>恢复本组自动计算</button></footer>'+
+            '</div></details>';
+        }).join('')+'</div>';
+      refreshAssetValues();
+    }
+    function refreshAssetValues() {
+      const {current}=assetInputs();
+      if(active!=='assetValues')return current.issues;
+      for(const section of q('.hc-list').querySelectorAll('[data-hc-asset-section]')){
+        const group=section.dataset.hcAssetSection;
+        const values=group==='scope'?current:Object.fromEntries(current.breakdowns[group]||[]);
+        const inputs=[...section.querySelectorAll('[data-hc-asset-value]')];
+        const issue=current.issues[group] || '';
+        const count=inputs.filter(input=>draft.assetValues[group]?.[input.dataset.hcAssetValue]!==undefined).length;
+        let invalid=false;
+        for(const input of inputs){
+          const key=input.dataset.hcAssetValue;
+          const error=invalidAssets.has(assetKey(group,key));
+          invalid ||= error;
+          input.setAttribute('aria-invalid',String(error));
+          input.placeholder=assetDisplay(values[key],progressAsset(group,key))||'—';
+          input.closest('.hc-asset-row').querySelector('[data-hc-asset-error]').hidden=!error;
+        }
+        section.querySelector('[data-hc-asset-summary]').textContent=issue||invalid?'需核对':count?'已手填 '+count+' 项':'自动计算';
+        section.dataset.assetInvalid=String(!!issue||invalid);
+        const issueNode=section.querySelector('[data-hc-asset-issue]');
+        issueNode.textContent=issue;
+        issueNode.hidden=!issue;
+        section.querySelector('[data-hc-asset-total]').textContent=group==='scope'?'留空恢复自动计算':
+          '预览合计 '+assetDisplay(Object.values(values).reduce((sum,value)=>sum+value,0))+' 万篇';
+        section.querySelector('[data-hc-asset-reset]').disabled=!count&&!invalid;
+      }
+      return current.issues;
+    }
+    function editAsset(input) {
+      const group=assetSection(input),key=input.dataset.hcAssetValue, id=assetKey(group,key);
+      const progress=progressAsset(group,key);
+      const value=input.valueAsNumber;
+      const {badInput,rangeOverflow,rangeUnderflow,stepMismatch}=input.validity;
+      if(badInput||rangeOverflow||rangeUnderflow||stepMismatch){
+        invalidAssets.set(id,input.value);
+      }else{
+        invalidAssets.delete(id);
+        if(input.value==='')delete draft.assetValues[group]?.[key];
+        else{
+          const values=draft.assetValues[group]??={};
+          values[key]=progress?Math.round(value*100)/100:Math.round(value*10000);
+        }
+      }
+      touch();refreshAssetValues();preview();
+    }
     function drawList() {
+      for(const section of q('.hc-list').querySelectorAll('[data-hc-asset-section]')){
+        if(section.open)assetExpanded.add(section.dataset.hcAssetSection);
+        else assetExpanded.delete(section.dataset.hcAssetSection);
+      }
+      editor.dataset.assetActive=String(active==='assetValues');
+      editor.querySelectorAll('[data-hc-group]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.hcGroup===active));
+      q('.hc-list-title h3').textContent=groups[active];
+      if(active==='assetValues'){
+        q('.hc-parent-note').hidden=true;
+        q('.hc-metric-toolbar').hidden=true;
+        q('.hc-list-title span').textContent='';
+        drawAssetValues();return;
+      }
       const ids=draft.order[active];
       const metrics=isMetric(active);
       const included=metrics?settings.visible(draft,active):visibleIds(active);
-      editor.querySelectorAll('[data-hc-group]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.hcGroup===active));
-      q('.hc-list-title h3').textContent=groups[active];
       const note=q('.hc-parent-note');
       const parent=parents[active];
       const indicatorsHidden=active==='useMetrics'&&!visible('details','indicators');
@@ -1882,6 +2120,18 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       touch();updateDimensions();drawList();preview();
     }
     function validate(){
+      const issues=assetInputs().current.issues;
+      const invalidAssetGroup=invalidAssets.keys().next().value?.split('/')[0] || Object.keys(issues).find(group=>issues[group]);
+      if(invalidAssetGroup){
+        active='assetValues';drawList();
+        const section=q('[data-hc-asset-section="'+invalidAssetGroup+'"]');
+        if(section){
+          section.open=true;
+          (section.querySelector('[aria-invalid="true"]')||section.querySelector('summary')).focus();
+        }
+        say(scopeIssueText,true);
+        return false;
+      }
       if(invalidValues.size){
         const [key]=invalidValues.keys();
         [active,openMetric]=key.split('/');
@@ -1904,7 +2154,9 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     }
     editor.addEventListener('input',event=>{
       const target=event.target;
-      if(target===field('title')){
+      if(target.hasAttribute('data-hc-asset-value')){
+        editAsset(target);return;
+      }else if(target===field('title')){
         draft.title=target.value.trim()||oldTitle();
       }else if(target.hasAttribute('data-hc-name')){
         const id=target.dataset.hcName, base=baseName(active,id), value=target.value.trim();
@@ -1977,6 +2229,18 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       if(button.hasAttribute('data-hc-group')){
         active=button.dataset.hcGroup;openMetric='';drawList();return;
       }
+      if(button.hasAttribute('data-hc-asset-reset')){
+        const section=button.closest('[data-hc-asset-section]');
+        const group=section.dataset.hcAssetSection;
+        delete draft.assetValues[group];
+        for(const input of section.querySelectorAll('[data-hc-asset-value]')){
+          input.value='';
+          invalidAssets.delete(assetKey(group,input.dataset.hcAssetValue));
+        }
+        touch();refreshAssetValues();preview();
+        section.querySelector('[data-hc-asset-value]').focus({preventScroll:true});
+        return;
+      }
       if(button.hasAttribute('data-hc-move')){
         const id=button.closest('[data-hc-row]').dataset.hcRow;
         const dir=button.dataset.hcMove, ids=draft.order[active], i=ids.indexOf(id);
@@ -2020,7 +2284,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
         }
         case 'reset':
           draft=settings.defaults();changed=true;share.hidden=true;
-          openMetric='';invalidValues.clear();
+          openMetric='';invalidValues.clear();invalidAssets.clear();
           refreshFields();drawList();preview();say('已恢复默认草稿。保存后在本机生效。');break;
         case 'quick-preview':
         case 'preview':
