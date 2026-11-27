@@ -129,6 +129,90 @@
 .ax-native{margin:13px 0}.ax-native summary{color:#195c44;font-weight:600;cursor:pointer;padding:8px 0}.ax-manual{margin-bottom:12px;padding:12px;background:#f2f6f3;border-radius:7px}.ax-manual p{margin:4px 0 10px}.ax-manual input{width:6em}.ax-manual [role=status]:empty{display:none}
 @media(max-width:650px){.ax-reader-dialog{width:100vw}.ax-reader{grid-template-columns:minmax(0,1fr);gap:8px}.ax-field-list{grid-template-columns:1fr 1fr}.ax-field-button{padding:7px}.ax-selected{padding-inline:12px}.ax-page-scroll{max-height:46dvh}}
 
+.ax-home {
+  container: asset-home / inline-size;
+  --ax-chart-0:#176b51; --ax-chart-1:#409579; --ax-chart-2:#69ac91;
+  --ax-chart-3:#91beaa; --ax-chart-4:#b6d4c5;
+  overflow-wrap:anywhere;
+}
+.ax-home .ax-donut {background:conic-gradient(var(--ax-chart-0) var(--ax-share),var(--ax-chart-3) 0)}
+.ax-home .ax-home-config-link {text-decoration:none}
+.ax-home .ax-block-title {margin:0 0 9px;font-size:21px}
+.ax-home .ax-panelhead+.ax-minititle {margin-top:15px}
+.ax-home .ax-bottom:not(:last-child) {margin-bottom:16px}
+.ax-home .ax-kpis[data-count="1"] {grid-template-columns:minmax(0,1fr)}
+.ax-home .ax-kpis[data-count="2"] {grid-template-columns:repeat(2,minmax(0,1fr))}
+.ax-home :is(.ax-work,.ax-banks)[data-count="1"] {grid-template-columns:minmax(0,1fr)}
+@container asset-home (min-width:1140px) {
+  .ax-home :is(.ax-work,.ax-banks)[data-count="2"] {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ax-home :is(.ax-work,.ax-banks)[data-count="3"] {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@container asset-home (max-width:760px) {
+  .ax-overview {grid-template-columns:1fr}
+  .ax-title {flex-wrap:wrap;align-items:flex-start;gap:10px}
+  .ax-titletools {justify-content:flex-start}
+  .ax-work,.ax-banks {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ax .ax-kpi {padding:12px}
+  .ax-usegrid {grid-template-columns:86px minmax(0,1fr);gap:8px;margin-inline:12px}
+  .ax-donut {width:82px}
+  .ax-bar>span:first-child {min-width:5em}
+}
+@container asset-home (max-width:560px) {
+  .ax-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ax-major {grid-column:1/-1}
+  .ax-kpis[data-count="2"] .ax-major {grid-column:auto}
+  .ax-work,.ax-banks {grid-template-columns:1fr}
+  .ax-kpihead>svg {display:none}
+  .ax .ax-kpi>strong {font-size:32px}
+  .ax-panelhead,.ax-bars {padding-inline:12px}
+  .ax-vers,.ax-segments {margin-inline:12px}
+  .ax-bank b {font-size:18px}
+  .ax-bottom {align-items:flex-start;flex-direction:column}
+}
+@container asset-home (max-width:375px) {
+  .ax-bar>span:first-child {min-width:0}
+  .ax .ax-bar {gap:4px}
+  .ax-usegrid {grid-template-columns:65px minmax(0,1fr)}
+  .ax-donut {width:64px}
+  .ax-donut strong {font-size:21px}
+  .ax-vers {grid-template-columns:1fr}
+  .ax .ax-ver {flex-wrap:nowrap}
+}
+.ax-home[data-theme="blue"] {
+  --ax-green:#005b94; --ax-ink:#17344c; --ax-text:#263e50; --ax-muted:#516b81;
+  --ax-line:#d5e2ec; --ax-faint:#edf5fa; --ax-chart-0:#056594; --ax-chart-1:#367fa9;
+  --ax-chart-2:#5998bd; --ax-chart-3:#87b4cf; --ax-chart-4:#b4cfdf;
+}
+.ax-home[data-theme="blue"] .ax-major {background:#005b94;border-color:#005b94}
+.ax-home[data-theme="blue"] .ax-major .ax-kpihead {color:#eef7ff}
+.ax-home[data-theme="blue"] .ax-major .ax-kpisub {color:#d8ecfa}
+.ax-home[data-theme="blue"] :is(.ax-iconbox,.ax-badge,.ax-bottom) {background:#e9f2f8;color:#255876;border-color:#d2e2ed}
+.ax-home[data-theme="blue"] .ax-meter,.ax-home[data-theme="blue"] .ax-track {background:#e6eff5}
+.ax-home[data-theme="blue"] .ax-meter span {background:#4092bd}
+.ax-home[data-theme="blue"] .ax-panelhead,.ax-home[data-theme="blue"] .ax-btn {border-color:var(--ax-line)}
+.ax-home[data-theme="blue"] .ax-tab[aria-pressed=true] {background:#e3f1fa;color:#004e80;border-color:#c9dfed}
+.ax-home[data-theme="blue"] .ax-ver {background:#f6f9fc;border-color:#d8e4ed}
+.ax-home[data-theme="blue"] :is(.ax-btn,.ax-bank,.ax-ver,.ax-tab,.ax-bar,.ax-legend):hover {background:#f0f6fb;color:#004e80}
+.ax-home[data-theme="blue"] .ax-primary {background:var(--ax-green);border-color:var(--ax-green);color:white}
+.ax-home[data-theme="blue"] .ax-primary:hover {background:#004571;color:white}
+.ax-home[data-theme="blue"] button.ax-kpi:hover {border-color:#76a6c5}
+.ax-home[data-theme="blue"] :is(.ax-bar,.ax-bank,.ax-legend)>.ax-ico {color:#7392aa}
+.ax-home[data-theme="blue"] :is(button,a):focus-visible {outline-color:#1577b6}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) {
+  --v2-bg:#f4f7fa; --v2-ink:#17344c; --v2-body:#263e50; --v2-muted:#516b81;
+  --v2-leaf:#005b94; --v2-line:#d5e2ec;
+}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) :is(.v2-brand,.v2-navlink,.v2-env,.v2-navgroup h2) {color:var(--v2-ink)}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-brand rect {fill:var(--v2-leaf)}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-brand path:nth-of-type(1) {fill:#f0f9ff}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-brand path:nth-of-type(2) {fill:#b9dbef}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-brand path:nth-of-type(3) {fill:#74b1d4}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-brand path:nth-of-type(4) {fill:var(--v2-leaf)}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-env:before {background:#3691bf}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-personbox select {background:#f5f9fc}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-navlink:hover {background:#f1f6fa}
+.v2-body:has(.ax-home[data-theme="blue"]:not(.ax-home-preview)) .v2-navlink[aria-current=page] {background:#e2f0f9;color:#004d7c;box-shadow:inset 3px 0 #147bb7}
+
 </style>
   <style>
 .mp-page{--mp-green:#136b51;--mp-dark:#153c32;--mp-line:#d7e4dd;--mp-sub:#496359;--mp-soft:#eff6f2;display:grid;gap:18px;color:#213e34;font-size:16px;line-height:1.55;min-width:0}
@@ -320,6 +404,108 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
 .ve-dialog:has(.ve-compare){width:min(940px,calc(100vw - 28px))}
 
 </style>
+  <style>
+.hc-editor{--hc-line:#d4e0d8;--hc-ink:#19392e;--hc-green:#116348;--hc-muted:#50685e;color:var(--hc-ink);min-width:0}
+.hc-editor :is(h1,h2,h3,p){margin:0}
+.hc-head,.hc-head-actions,.hc-panel-head,.hc-share-line,.hc-list-title{display:flex;align-items:center;gap:12px}
+.hc-head{justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+.hc-head h1{font-size:clamp(28px,2.2vw,39px);line-height:1.35;letter-spacing:-.035em}
+.hc-head p{color:var(--hc-muted);margin-top:6px;max-width:45em}
+.hc-head-actions{flex-wrap:wrap;gap:8px}
+.hc-editor .hc-btn,.hc-editor .hc-text{font:inherit;font-weight:620;line-height:1.4;cursor:pointer}
+.hc-editor .hc-btn{padding:9px 14px;background:white;color:var(--hc-ink);border:1px solid #bfcfc5;border-radius:7px}
+.hc-editor .hc-btn:hover{border-color:#85a794;background:#f3f8f4}
+.hc-editor .hc-btn.hc-primary{color:white;background:var(--hc-green);border-color:var(--hc-green)}
+.hc-editor .hc-btn.hc-primary:hover{background:#0a503a}
+.hc-editor .hc-text{color:var(--hc-green);padding:6px 2px;border:0;background:transparent;text-decoration:none}
+.hc-editor .hc-text:hover{text-decoration:underline}
+.hc-mobile-preview{display:none}
+.hc-status:not(:empty){padding:9px 13px;border-left:3px solid #4e9472;background:#e9f3ec;margin-bottom:12px}
+.hc-status.hc-error{color:#783b19;background:#fff2df;border-color:#bc732e}
+.hc-columns{display:grid;grid-template-columns:minmax(342px,0.87fr) minmax(0,1.55fr);gap:16px;align-items:start}
+.hc-controls{display:grid;gap:14px;min-width:0}
+.hc-panel,.hc-share{background:white;border:1px solid var(--hc-line);border-radius:12px;min-width:0}
+.hc-panel-head{justify-content:space-between;border-bottom:1px solid var(--hc-line);padding:13px 16px;min-height:53px}
+.hc-panel h2,.hc-dialog h2{font-size:20px;line-height:1.4}
+.hc-fields{padding:15px 16px 17px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hc-fields label{display:grid;gap:5px;min-width:0;font-weight:600}
+.hc-wide{grid-column:1/-1}
+.hc-editor :is(.hc-fields input,.hc-fields select,.hc-name input,.hc-share-line input){
+  min-width:0;width:100%;border:1px solid #bfcec4;background:#fff;border-radius:6px;
+  padding:6px 8px;color:var(--hc-ink);font:inherit;font-weight:450;min-height:39px;
+}
+.hc-fields select:disabled{opacity:.65}
+.hc-groups{display:flex;flex-wrap:wrap;gap:5px;padding:13px 15px;border-bottom:1px solid #e4ece7}
+.hc-groups button{border:1px solid transparent;background:transparent;padding:5px 8px;border-radius:6px;color:#4b6156;min-height:34px;font-size:16px}
+.hc-groups button[aria-pressed="true"]{color:#0c6544;border-color:#c3dfce;background:#e6f3eb;font-weight:680}
+.hc-groups button:hover:not([aria-pressed="true"]){background:#f2f6f3}
+.hc-list-title{padding:13px 16px 5px;justify-content:space-between}
+.hc-list-title h3{font-size:17px}
+.hc-list-title span,.hc-parent-note,.hc-name span{color:var(--hc-muted);font-size:14px}
+.hc-parent-note{margin:6px 15px;background:#f3f7f3;border-radius:5px;padding:6px 9px}
+.hc-parent-note .hc-text{font-size:inherit}
+.hc-list{padding:0 15px 6px}
+.hc-row{min-width:0;display:grid;grid-template-columns:22px minmax(0,1fr) max-content;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid #e1eae4}
+.hc-row:last-child{border-bottom:0}
+.hc-row input[type="checkbox"]{width:19px;height:19px;accent-color:var(--hc-green);cursor:pointer}
+.hc-name{display:grid;gap:3px;min-width:0}
+.hc-name span{line-height:1.2}
+.hc-name input{min-height:34px}
+.hc-row[data-visible="false"] .hc-name input{color:#68786e;background:#f7f9f7}
+.hc-move{display:flex;gap:3px;margin-top:16px}
+.hc-move button{width:31px;height:33px;border:1px solid #c9d8ce;border-radius:5px;background:white;display:grid;place-items:center}
+.hc-move button:hover:enabled{background:#e9f4ed;border-color:#83ae94}
+.hc-move button:disabled{color:#acb9b1;opacity:.54}
+.hc-move svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.8}
+.hc-share{padding:13px 16px;margin-bottom:14px}
+.hc-share label{font-weight:650}
+.hc-share-line{margin-top:6px;flex-wrap:wrap;gap:8px}
+.hc-share-line input{flex:1 1 220px}
+.hc-share p{margin-top:5px;color:var(--hc-muted);font-size:15px}
+.hc-preview{position:sticky;top:92px;overflow:hidden}
+.hc-preview-scroll{max-height:calc(100dvh - 162px);min-height:220px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.hc-canvas,.hc-expanded{padding:14px;background:#f4f7f4}
+.hc-canvas{container:home-preview / inline-size}
+.hc-canvas .ax :is(button,a),.hc-expanded .ax :is(button,a){cursor:default}
+.hc-empty{padding:32px 14px;text-align:center;color:var(--hc-muted)}
+.hc-dialog{color:var(--hc-ink);background:white;border:1px solid var(--hc-line);padding:0;width:min(1440px,92vw);max-width:100vw;max-height:92dvh;border-radius:12px}
+.hc-dialog::backdrop{background:#122a2380}
+.hc-dialog .hc-panel-head{position:sticky;top:0;z-index:1;background:white}
+.hc-editor [hidden]{display:none}
+@container home-preview (max-width: 850px){
+  .hc-canvas .ax-title{display:block}.hc-canvas .ax-titletools{margin-top:8px;justify-content:start}
+  .hc-canvas .ax-overview{grid-template-columns:minmax(0,1fr)}
+  .hc-canvas .ax-work,.hc-canvas .ax-banks{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hc-canvas .ax-vers{grid-template-columns:repeat(auto-fit,minmax(86px,1fr))}
+  .hc-canvas .ax-kpi{padding:12px}.hc-canvas .ax-kpihead>svg{display:none}
+  .hc-canvas .ax-kpihead{font-size:16px}.hc-canvas .ax-kpi>strong{font-size:31px}
+}
+@container home-preview (max-width: 540px){
+  .hc-canvas .ax-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hc-canvas .ax-kpis .ax-kpi:only-child{grid-column:1/-1}
+  .hc-canvas .ax-bank{flex-wrap:wrap;gap:4px}
+}
+@media(max-width:1100px){
+  .hc-columns{grid-template-columns:minmax(320px,.92fr) minmax(0,1.15fr);gap:12px}
+  .hc-fields{padding:12px}.hc-panel-head{padding-inline:12px}.hc-list{padding-inline:12px}.hc-canvas{padding:10px}
+}
+@media(max-width:880px){
+  .hc-mobile-preview{display:inline-block}
+  .hc-columns{grid-template-columns:minmax(0,1fr)}
+  .hc-preview{position:static}
+  .hc-preview-scroll{max-height:none;overflow:visible}
+  .hc-controls{gap:12px}
+}
+@media(max-width:470px){
+  .hc-head{gap:10px;margin-bottom:12px}
+  .hc-head-actions{width:100%;justify-content:flex-start}
+  .hc-head-actions .hc-btn{padding:8px 9px}
+  .hc-groups{padding:9px}.hc-groups button{padding-inline:7px}
+  .hc-dialog{width:96vw}
+}
+
+</style>
+  
   
   
   
@@ -402,11 +588,11 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   ];
   const paths={dashboard:'M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z',archive:'M3 4h18v5H3z M5 10v10h14V10 M9 13h6',layers:'m2 7 10-5 10 5-10 5z M2 12l10 5 10-5 M2 17l10 5 10-5',pen:'M11 4H4v16h16v-7 M9 15l1-4 9-9 3 3-9 9z',quality:'M5 3h14v18H5z M9 7h6 M8 14l3 3 5-6',apps:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',people:'M4 21v-3a5 5 0 0 1 10 0v3 M13 4a4 4 0 1 0 0 8 M18 13a5 5 0 0 1 3 5v2 M13 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',ports:'M3 3h6v5H3z M15 16h6v5h-6z M2 16h7v5H2z M6 9v4h12v2 M6 13v2',compare:'M3 4h7v16H3z M14 4h7v16h-7z M5 8h3 M16 8h3 M5 12h3 M16 12h3',checklist:'M8 5h12v16H4V5h3 M9 3h6v4H9z M7 13l2 2 4-5 M13 16h4',menu:'M3 6h18 M3 12h18 M3 18h18'};
   function icon(id){return '<svg class="v2-i" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="'+paths[id]+'"/></svg>';}
-  const parents={efficiency:'resources','cooling-app':'apps','xrd-app':'apps'};
+  const parents={efficiency:'resources','cooling-app':'apps','xrd-app':'apps','home-config':'home'};
   const aliases={annotation:'annotations',evaluation:'benchmarks',cooling:'cooling-app',xrd:'xrd-app'};
   const legacyRoutes=new Set('workflow crystal curve-work materials-tools function-index evaluation-desk extraction luoshu batches batch-record pipeline-work quality-work benchmark-work releases runs jobs audit accounts'.split(' '));
   const labels=Object.fromEntries(groups.flatMap(([,g])=>g.map(([id,name])=>[id,name])));
-  Object.assign(labels,{efficiency:'处理步骤与效率','cooling-app':'相图冷却曲线','xrd-app':'XRD 图谱识别'});
+  Object.assign(labels,{efficiency:'处理步骤与效率','cooling-app':'相图冷却曲线','xrd-app':'XRD 图谱识别','home-config':'首页配置'});
   function permitted(route){
     const p=person();
     if(p.external)return ['home','resources'].includes(route)&&(can('view')||can('upload'));
@@ -426,7 +612,34 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   }
   let noticeTimer;
   function notify(message){const node=document.getElementById('v2-notice');node.textContent=message;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>node.textContent='',3400);}
-  const V2=window.V2={register:(route,handler)=>routes.set(route,handler),go,can,canView,person,esc,notify,icon,capabilities,people,settings,permitted,
+  let sharedHomeLayout='';
+  function clearSharedHome(){
+    sharedHomeLayout='';
+    if(history.state?.homeLayout)history.replaceState({...history.state,homeLayout:''},'');
+  }
+  function homeContext(route,params){
+    const isHome=route==='home'||route==='home-config';
+    if(!permitted('home-config')){clearSharedHome();return;}
+    if(isHome&&params.has('layout')){
+      const requested=params.get('layout');
+      if(V2HomeConfig.decode(requested))sharedHomeLayout=requested;
+      else{
+        sharedHomeLayout='';
+        params.delete('layout');
+        notify('分享链接中的配置无效，已打开本机首页方案。');
+        history.replaceState({...history.state,homeLayout:''},'','#'+route);
+      }
+    }else if(history.state&&Object.hasOwn(history.state,'homeLayout')){
+      sharedHomeLayout=history.state.homeLayout;
+    }
+    if(sharedHomeLayout){
+      if(isHome)params.set('layout',sharedHomeLayout);
+      const hash=isHome?'#'+route+'?'+params:location.hash;
+      if(history.state?.homeLayout!==sharedHomeLayout||location.hash!==hash)
+        history.replaceState({...history.state,homeLayout:sharedHomeLayout},'',hash);
+    }
+  }
+  const V2=window.V2={register:(route,handler)=>routes.set(route,handler),go,can,canView,person,esc,notify,icon,capabilities,people,settings,permitted,clearSharedHome,
     applyPermissions(grants,assigned){
       if(!can('configure'))return false;
       const normalized={};
@@ -457,6 +670,8 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     }
     if(route==='v2-content'){go('home');return;}
     if(route==='home'&&(person().external||!can('view'))&&permitted('resources')){go('resources');return;}
+    const params=new URLSearchParams(raw||'');
+    homeContext(route,params);
     const nav=document.getElementById('v2-nav');
     nav.innerHTML=groups.map(([g,items])=>{
       const links=items.filter(([id])=>permitted(id)&&!(id==='home'&&(person().external||!can('view'))));
@@ -470,7 +685,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     }else{
       const view=document.createElement('div');
       root.append(view);
-      routes.get(route)(view,Object.fromEntries(new URLSearchParams(raw||'')));
+      routes.get(route)(view,Object.fromEntries(params));
     }
     window.scrollTo(0,0);
   }
@@ -479,6 +694,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     control.innerHTML=people.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
     control.value=person().id;
     control.onchange=()=>{
+      clearSharedHome();
       selected=control.value;try{sessionStorage.setItem(identityKey,JSON.stringify(selected));}catch{}
       document.querySelectorAll('dialog[open]').forEach(d=>d.close());
       notify('已切换至演示人员 '+person().name);go('home');
@@ -557,6 +773,109 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
 
 </script>
 <script>
+(() => {
+  'use strict';
+  const catalog = {
+    blocks: {metrics:'核心指标', distribution:'资产分布', uses:'语料用途与版本', actions:'业务与应用入口', banks:'多模态资源库', efficiency:'离线处理进度'},
+    metrics: {parsed:'首期上线 · 已解析内容', reserve:'总储备量', progress:'储备解析进度', remaining:'待解析量', training:'模型训练语料', evaluation:'评测留出语料'},
+    actions: {resources:'离线入库', annotations:'专家审核', 'cooling-app':'相图冷却曲线', 'xrd-app':'XRD 图谱识别'},
+    banks: {text:'文本库', table:'表格库', image:'图像库', formula:'公式库'},
+    dimensions: {kind:'资料类型', family:'材料门类', topic:'研究专题'},
+    details: {uses:'语料用途', versions:'版本分布'}
+  };
+  const groupNames = Object.keys(catalog);
+  const publicPage = 'https://lzmochen.github.io/materials-corpus-workbench/v2/';
+  const storageKey = () => 'ustb-home-layout-v1:' + V2.person().id;
+  function defaults() {
+    const config = {v:1, title:'数据资产总览看板', theme:'green', dimension:'kind', order:{}, hidden:{}, names:{}};
+    for (const group of groupNames) {
+      config.order[group] = Object.keys(catalog[group]);
+      config.hidden[group] = [];
+      config.names[group] = {};
+    }
+    config.hidden.metrics = ['remaining','training','evaluation'];
+    return config;
+  }
+  function cleanText(value, limit) {
+    if (typeof value !== 'string') return '';
+    return Array.from(value.replace(/[\x00-\x1F\x7F]/g, ' ').trim()).slice(0, limit).join('');
+  }
+  function validIds(input, ids) {
+    return Array.isArray(input) ? [...new Set(input.filter(id => ids.includes(id)))] : [];
+  }
+  function normalize(input) {
+    const cfg = defaults();
+    if (!input || input.v !== 1) return cfg;
+    cfg.title = cleanText(input.title,40) || cfg.title;
+    if (input.theme === 'blue') cfg.theme = 'blue';
+    if (Object.hasOwn(catalog.dimensions,input.dimension)) cfg.dimension = input.dimension;
+    for (const group of groupNames) {
+      const ids = Object.keys(catalog[group]);
+      const priority = validIds(input.order?.[group],ids);
+      cfg.order[group] = [...priority,...ids.filter(id => !priority.includes(id))];
+      if (Array.isArray(input.hidden?.[group])) {
+        const hidden = validIds(input.hidden[group],ids);
+        cfg.hidden[group] = ids.filter(id => hidden.includes(id));
+      }
+      for (const id of ids) {
+        const title = cleanText(input.names?.[group]?.[id],24);
+        if (title && title !== catalog[group][id]) cfg.names[group][id] = title;
+      }
+    }
+    const dimensions = visible(cfg,'dimensions');
+    if (dimensions.length && !dimensions.includes(cfg.dimension)) cfg.dimension = dimensions[0];
+    return cfg;
+  }
+  function visible(cfg, group) {
+    return cfg.order[group].filter(id => !cfg.hidden[group].includes(id));
+  }
+  function label(cfg, group, id) {
+    return cfg.names[group][id] || catalog[group][id];
+  }
+  function encode(input) {
+    const cfg = normalize(input), base = defaults(), changes = {v:1};
+    for (const key of ['title','theme','dimension']) if (cfg[key] !== base[key]) changes[key] = cfg[key];
+    for (const key of ['order','hidden','names']) {
+      for (const group of groupNames) {
+        if (JSON.stringify(cfg[key][group]) === JSON.stringify(base[key][group])) continue;
+        if (!changes[key]) changes[key] = {};
+        changes[key][group] = cfg[key][group];
+      }
+    }
+    const bytes = new TextEncoder().encode(JSON.stringify(changes));
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decode(token) {
+    if (typeof token !== 'string' || !/^[\w-]{1,16000}$/.test(token)) return null;
+    try {
+      const binary = atob(token.replace(/-/g,'+').replace(/_/g,'/'));
+      const bytes = Uint8Array.from(binary,c => c.charCodeAt(0));
+      const data = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+      return data?.v === 1 ? normalize(data) : null;
+    } catch { return null; }
+  }
+  function load(token) {
+    if (token !== undefined && token !== null) return decode(token) || defaults();
+    try { return decode(localStorage.getItem(storageKey())) || defaults(); }
+    catch { return defaults(); }
+  }
+  function save(cfg) {
+    try { localStorage.setItem(storageKey(),encode(cfg)); }
+    catch { return false; }
+    V2.clearSharedHome();
+    return true;
+  }
+  function shareUrl(cfg) {
+    const url = new URL(location.protocol === 'file:' ? publicPage : location.href);
+    url.search = '';
+    url.hash = 'home?layout=' + encode(cfg);
+    return url.href;
+  }
+  window.V2HomeConfig = {catalog,defaults,load,save,visible,label,encode,decode,shareUrl};
+})();
+
+</script>
+<script>
 /* 首页与台账共用的模拟统计单元。规模单位为篇，原文仅为对应单元的展示样本。 */
 (() => {
   'use strict';
@@ -616,8 +935,8 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   const fmt = value => Number(value).toLocaleString('zh-CN');
   const wan = value => +(value / 10000).toFixed(2);
   const dims = {kind:'资料类型',family:'材料门类',topic:'研究专题',use:'语料用途',version:'资源版本'};
-  const color = ['#176b51','#409579','#69ac91','#91beaa','#b6d4c5'];
   const icons = {
+    settings:'<path d="M3 7h7m4 0h7M3 17h2m4 0h12"/><circle cx="12" cy="7" r="2"/><circle cx="7" cy="17" r="2"/>',
     dashboard:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="11" width="7" height="10" rx="2"/><rect x="3" y="14" width="8" height="7" rx="2"/>',
     book:'<path d="M3 5c3-1 6-.5 9 1 3-1.5 6-2 9-1v14c-3-1-6-.5-9 1-3-1.5-6-2-9-1z"/><path d="M12 6v14"/>',
     layers:'<path d="m12 3 10 5-10 5L2 8zM3 12l9 4.5 9-4.5M3 16l9 4.5 9-4.5"/>',
@@ -675,53 +994,139 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   const drill=(d,v,measure)=>A.go('resources',{dim:d||'',v:v||'',measure:measure==='reserve'?'reserve':'parsed'});
 
 
-  function hero(rows){
-    const parsed=sum(rows,'parsed'),reserve=sum(rows,'reserve'),pc=(100*parsed/reserve).toFixed(1);
-    return '<div class="ax-kpis"><button type="button" class="ax-major ax-kpi" data-ax="drill" data-measure="parsed"><span class="ax-kpihead"><span>'+i('book')+'首期上线 · 已解析内容</span>'+i('arrow')+'</span><strong>'+wan(parsed)+'<small>万篇</small></strong><span class="ax-kpisub">已纳入首期资产台账，可查看分类与原文样例</span></button>'+
-      '<button type="button" class="ax-kpi" data-ax="drill" data-measure="reserve"><span class="ax-kpihead"><span>'+i('archive')+'总储备量</span>'+i('arrow')+'</span><strong>'+wan(reserve)+'<small>万篇</small></strong><span class="ax-kpisub">包含首期已解析内容，按资料来源归集</span></button>'+
-      '<article class="ax-kpi"><span class="ax-kpihead"><span>'+i('pie')+'储备解析进度</span></span><strong>'+pc+'<small>%</small></strong><span class="ax-meter" role="img" aria-label="总储备中已解析 '+pc+'%"><span style="width:'+pc+'%"></span></span><span class="ax-kpisub">剩余 '+wan(reserve-parsed)+' 万篇待解析</span></article></div>';
+  const visible = (cfg, group) => window.V2HomeConfig.visible(cfg, group);
+  const homeLabel = (cfg, group, id) => esc(window.V2HomeConfig.label(cfg, group, id));
+
+  function hero(rows,cfg){
+    const ids=visible(cfg,'metrics');
+    if(!ids.length)return '';
+    const parsed=sum(rows,'parsed'),reserve=sum(rows,'reserve'),remaining=reserve-parsed;
+    const percent=reserve?(100*parsed/reserve).toFixed(1):null;
+    const uses=Object.fromEntries(groups(rows,'use'));
+    const metrics={
+      parsed:{icon:'book',value:parsed,attrs:kv('measure','parsed'),help:'已纳入首期资产台账，可查看分类与原文样例'},
+      reserve:{icon:'archive',value:reserve,attrs:kv('measure','reserve'),help:'包含首期已解析内容，按资料来源归集'},
+      progress:{icon:'pie',value:percent,help:ids.includes('remaining')?'已解析内容占总储备量的比例':'剩余 '+wan(remaining)+' 万篇待解析'},
+      remaining:{icon:'clock',value:remaining,help:'同一批次总储备量与已解析量之差'},
+      training:{icon:'layers',value:uses['模型训练']||0,attrs:mapAttrs('use','模型训练'),help:'已解析资料中用于模型训练的内容'},
+      evaluation:{icon:'file',value:uses['评测留出']||0,attrs:mapAttrs('use','评测留出'),help:'已解析资料中留作独立评测的内容'}
+    };
+    const cards=ids.map((id,idx)=>{
+      const metric=metrics[id],isRate=id==='progress';
+      const value=isRate?(percent??'—'):wan(metric.value);
+      const unit=isRate?(percent===null?'':'%'):'万篇';
+      const meter=isRate&&percent!==null?'<span class="ax-meter" role="img" aria-label="储备解析进度 '+percent+'%"><span style="width:'+percent+'%"></span></span>':'';
+      const content='<span class="ax-kpihead"><span>'+i(metric.icon)+homeLabel(cfg,'metrics',id)+'</span>'+(metric.attrs?i('arrow'):'')+'</span><strong>'+value+'<small>'+unit+'</small></strong>'+meter+'<span class="ax-kpisub">'+metric.help+'</span>';
+      const cls='ax-kpi'+(idx===0?' ax-major':'');
+      return metric.attrs?button(content,'drill',metric.attrs+' '+kv('metric',id),cls):'<article class="'+cls+'" '+kv('metric',id)+'>'+content+'</article>';
+    }).join('');
+    const label=homeLabel(cfg,'blocks','metrics');
+    const heading=cfg.names.blocks.metrics?'<h2 class="ax-block-title">'+label+'</h2>':'';
+    return heading+'<div class="ax-kpis" role="group" aria-label="'+label+'" data-count="'+ids.length+'">'+cards+'</div>';
   }
   function panel(title,content,aside='',cls=''){
     return '<section class="ax-panel '+cls+'"><div class="ax-panelhead"><h2>'+title+'</h2>'+aside+'</div>'+content+'</section>';
   }
-  function composition(rows,dimension){
+  function composition(rows,cfg,selected){
+    const choices=visible(cfg,'dimensions');
+    if(!choices.length)return '';
+    const dimension=choices.includes(selected)?selected:choices.includes(cfg.dimension)?cfg.dimension:choices[0];
     const bins=groups(rows,dimension),max=bins[0]?.[1]||1;
-    const tabs=['kind','family','topic'].map(d=>button(dims[d],'dimension',kv('dim',d)+' aria-pressed="'+(dimension===d)+'"','ax-tab')).join('');
-    return panel('资产分布','<div class="ax-segments">'+tabs+'</div><div class="ax-bars">'+bins.map(([label,count],idx)=>button('<span>'+label+'</span><span class="ax-track"><b style="width:'+Math.round(count/max*100)+'%;background:'+color[idx%color.length]+'"></b></span><strong>'+wan(count)+' <small>万篇</small></strong>'+i('right'),'drill',mapAttrs(dimension,label),'ax-bar')).join('')+'</div>','<span class="ax-muted">首期已解析量</span>');
+    const tabs=choices.map(d=>button(homeLabel(cfg,'dimensions',d),'dimension',kv('dim',d)+' aria-pressed="'+(dimension===d)+'"','ax-tab')).join('');
+    const bars=bins.map(([label,count],idx)=>button('<span>'+esc(label)+'</span><span class="ax-track"><b style="width:'+Math.round(count/max*100)+'%;background:var(--ax-chart-'+(idx%5)+')"></b></span><strong>'+wan(count)+' <small>万篇</small></strong>'+i('right'),'drill',mapAttrs(dimension,label),'ax-bar')).join('');
+    return panel(homeLabel(cfg,'blocks','distribution'),'<div class="ax-segments">'+tabs+'</div><div class="ax-bars">'+bars+'</div>','<span class="ax-muted">首期已解析量</span>');
   }
-  function usesAndVersions(rows){
-    const total=sum(rows,'parsed'),uses=groups(rows,'use'),pct=100*uses[0][1]/total;
-    const track= '<div class="ax-usegrid"><div class="ax-donut" style="--ax-share:'+pct+'%" role="img" aria-label="'+esc(uses[0][0])+pct+'%"><div><strong>'+wan(total)+'</strong><small>万篇</small></div></div><div class="ax-legends">'+uses.map(([key,num],idx)=>button('<b class="ax-dot" style="background:'+color[idx?3:0]+'"></b><span>'+key+'<small>'+wan(num)+' 万篇</small></span><strong>'+ +(num/total*100).toFixed(1)+'%</strong>'+i('right'),'drill',mapAttrs('use',key),'ax-legend')).join('')+'</div></div>';
-    const versions=groups(rows,'version').sort(([a],[b])=>b.localeCompare(a)).map(([v,n])=>button('<span>'+v+'</span><b>'+wan(n)+' <small>万篇</small></b>','drill',mapAttrs('version',v),'ax-ver')).join('');
-    return panel('语料用途与版本',track+'<div class="ax-minititle">版本分布</div><div class="ax-vers">'+versions+'</div>');
+  function usesAndVersions(rows,cfg){
+    const ids=visible(cfg,'details');
+    if(!ids.length)return '';
+    const total=sum(rows,'parsed'),uses=groups(rows,'use');
+    const percent=num=>total?+(num/total*100).toFixed(1):0;
+    const legend=uses.map(([key,num],idx)=>button('<b class="ax-dot" style="background:var(--ax-chart-'+(idx?3:0)+')"></b><span>'+esc(key)+'<small>'+wan(num)+' 万篇</small></span><strong>'+percent(num)+'%</strong>'+i('right'),'drill',mapAttrs('use',key),'ax-legend')).join('');
+    const versions=groups(rows,'version').sort(([a],[b])=>b.localeCompare(a)).map(([v,n])=>button('<span>'+esc(v)+'</span><b>'+wan(n)+' <small>万篇</small></b>','drill',mapAttrs('version',v),'ax-ver')).join('');
+    const useLabel=homeLabel(cfg,'details','uses');
+    const useHeading=cfg.names.details.uses||ids[0]!=='uses'?'<div class="ax-minititle">'+useLabel+'</div>':'';
+    const share=percent(uses[0]?.[1]||0);
+    const content={
+      uses:useHeading+'<div class="ax-usegrid" role="group" aria-label="'+useLabel+'"><div class="ax-donut" style="--ax-share:'+share+'%" role="img" aria-label="'+esc(uses[0]?.[0])+' '+share+'%"><div><strong>'+wan(total)+'</strong><small>万篇</small></div></div><div class="ax-legends">'+legend+'</div></div>',
+      versions:'<div class="ax-minititle">'+homeLabel(cfg,'details','versions')+'</div><div class="ax-vers">'+versions+'</div>'
+    };
+    return panel(homeLabel(cfg,'blocks','uses'),ids.map(id=>content[id]).join(''));
   }
   const bankDefs=[['文本库','file','原文段落','段'],['表格库','table','科研表格','张'],['图像库','image','显微图与图谱','幅'],['公式库','formula','可检索公式','条']];
+  const bankIds=['text','table','image','formula'];
   const bankNums=[1860,136,320,48];
-  function banks(){return panel('多模态资源库','<div class="ax-banks">'+bankDefs.map(([name,icon,desc,unit],idx)=>button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+name+'</strong><small>'+desc+'</small></span><b>'+fmt(bankNums[idx])+'<small>万'+unit+'</small></b>'+i('right'),'bank',kv('v',idx),'ax-bank')).join('')+'</div>','<span class="ax-muted">按解析产物分别计量</span>');}
+  function banks(cfg){
+    const ids=visible(cfg,'banks');
+    if(!ids.length)return '';
+    const cells=ids.map(id=>{
+      const idx=bankIds.indexOf(id),[,icon,desc,unit]=bankDefs[idx];
+      return button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+homeLabel(cfg,'banks',id)+'</strong><small>'+desc+'</small></span><b>'+fmt(bankNums[idx])+'<small>万'+unit+'</small></b>'+i('right'),'bank',kv('v',idx),'ax-bank');
+    });
+    return panel(homeLabel(cfg,'blocks','banks'),'<div class="ax-banks" data-count="'+cells.length+'">'+cells.join('')+'</div>','<span class="ax-muted">按解析产物分别计量</span>');
+  }
   function title(label,desc,tools=''){
     return '<div class="ax-title"><div><h1>'+label+'</h1><p>'+desc+'</p></div><div class="ax-titletools">'+tools+'</div></div>';
   }
-  function workLinks(){
-    const cards=[
-      ['resources','upload','离线入库','导入文件并登记资料出处',can('upload')],
-      ['annotations','file','专家审核','核查证据与标注，记录审核意见',can('review')],
-      ['cooling-app','trend','相图冷却曲线','查看曲线并定位特征点',can('apps')],
-      ['xrd-app','image','XRD 图谱识别','查看衍射峰与识别结果',can('apps')]
-    ].filter(([route,,,,show])=>show&&A.permitted(route));
-    return cards.length?panel('业务与应用入口','<div class="ax-work">'+cards.map(([route,icon,name,desc])=>button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+name+'</strong><small>'+desc+'</small></span>'+i('right'),'work',kv('v',route),'ax-bank')).join('')+'</div>'):'';
+  function workLinks(cfg){
+    const actions={
+      resources:['upload','导入文件并登记资料出处','upload'],
+      annotations:['file','核查证据与标注，记录审核意见','review'],
+      'cooling-app':['trend','查看曲线并定位特征点','apps'],
+      'xrd-app':['image','查看衍射峰与识别结果','apps']
+    };
+    const ids=visible(cfg,'actions').filter(id=>can(actions[id][2])&&A.permitted(id));
+    const cells=ids.map(id=>{
+      const [icon,desc]=actions[id];
+      return button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+homeLabel(cfg,'actions',id)+'</strong><small>'+desc+'</small></span>'+i('right'),'work',kv('v',id),'ax-bank');
+    });
+    return cells.length?panel(homeLabel(cfg,'blocks','actions'),'<div class="ax-work" data-count="'+cells.length+'">'+cells.join('')+'</div>'):'';
   }
-  function paintHome(el){
+  function homeMarkup(cfg,rows,tools,dimension){
+    const renderers={
+      metrics:()=>hero(rows,cfg),
+      distribution:()=>composition(rows,cfg,dimension),
+      uses:()=>usesAndVersions(rows,cfg),
+      actions:()=>workLinks(cfg),
+      banks:()=>banks(cfg),
+      efficiency:()=>'<div class="ax-bottom"><span>'+i('clock')+'<span><b>'+homeLabel(cfg,'blocks','efficiency')+'</b><small>查看各工序的处理量、耗时、吞吐与成功率</small></span></span>'+button('查看处理效率 '+i('arrow'),'efficiency')+'</div>'
+    };
+    const blocks=visible(cfg,'blocks').map(id=>({id,html:renderers[id]()})).filter(b=>b.html);
+    const chart=id=>id==='distribution'||id==='uses';
+    let body='';
+    for(let n=0;n<blocks.length;n++){
+      const block=blocks[n],next=blocks[n+1];
+      if(chart(block.id)&&next&&chart(next.id)){
+        body+='<div class="ax-overview">'+block.html+next.html+'</div>';
+        n++;
+      }else body+=block.html;
+    }
+    if(!body)body='<p class="ax-empty">当前方案没有可展示的模块。</p>';
+    return '<div class="ax ax-home" data-theme="'+(cfg.theme==='blue'?'blue':'green')+'">'+title(esc(cfg.title),'从首期已解析内容出发，按资料类型、材料门类或研究专题查看资产。',tools)+body+'</div>';
+  }
+  function paintHome(el,params={}){
     if(!can('view')&&can('upload')){paintLedger(el,{scope:'imports'});return;}
     if(!can('view')){el.innerHTML='<div class="ax ax-empty">当前人员尚未获授查看权限。</div>';return;}
     if(who().external){paintLedger(el,{scope:'assigned'});return;}
     const rows=readableSeeds();
     if(!rows.length){el.innerHTML='<div class="ax ax-empty">当前人员暂无可查看资源。</div>';return;}
-    const dim=el.dataset.axGroup||'kind';
-    const dashTools=badge('模拟数据')+button('进入资源台账 '+i('arrow'),'drill','','ax-btn ax-primary');
-    el.innerHTML='<div class="ax">'+title('数据资产总览看板','从首期已解析内容出发，按资料类型、材料门类或研究专题查看资产。',dashTools)+hero(rows)+
-      '<div class="ax-overview">'+composition(rows,dim)+usesAndVersions(rows)+'</div>'+workLinks()+banks()+
-      '<div class="ax-bottom"><span>'+i('clock')+'<span><b>离线处理进度</b><small>查看各工序的处理量、耗时、吞吐与成功率</small></span></span>'+button('查看处理效率 '+i('arrow'),'efficiency')+'</div></div>';
-    bind(el,{dimension:b=>{el.dataset.axGroup=b.dataset.dim;paintHome(el);}});
+    const cfg=window.V2HomeConfig.load(params.layout);
+    const editHref=params.layout?'#home-config?'+new URLSearchParams({layout:window.V2HomeConfig.encode(cfg)}):'#home-config';
+    const tools=badge('模拟数据')+'<a class="ax-btn ax-home-config-link" href="'+esc(editHref)+'">'+i('settings')+'配置首页</a>'+button('进入资源台账 '+i('arrow'),'drill','','ax-btn ax-primary');
+    function render(dimension){
+      el.innerHTML=homeMarkup(cfg,rows,tools,dimension);
+      bind(el,{dimension:b=>render(b.dataset.dim)});
+      if(dimension)el.querySelector('[data-ax="dimension"][aria-pressed="true"]')?.focus({preventScroll:true});
+    }
+    render();
+  }
+  function renderHomePreview(el,cfg){
+    if(!can('view')||who().external){el.replaceChildren();return;}
+    const rows=readableSeeds();
+    if(!rows.length){el.innerHTML='<div class="ax ax-empty">当前人员暂无可查看资源。</div>';return;}
+    el.innerHTML=homeMarkup(cfg,rows,badge('模拟数据'));
+    const home=el.firstElementChild;
+    home.classList.add('ax-home-preview');
+    home.inert=true;
   }
 
   const filtersFor=(r,params)=>Object.keys(dims).every(d=>!params[d]||r[d]===params[d]);
@@ -979,7 +1384,234 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   mount('home',paintHome);
   mount('resources',(el,params)=>{ready.then(()=>{if(el.isConnected)paintLedger(el,params);});});
   mount('efficiency',efficiency);
-  window.V2Assets={getSource,getEvidence,preview,ready};
+  window.V2Assets={getSource,getEvidence,preview,ready,renderHomePreview};
+})();
+
+</script>
+<script>
+(() => {
+  'use strict';
+  const App = window.V2;
+  const groups = {
+    blocks: '首页模块', metrics: '指标卡', dimensions: '资产分类',
+    details: '用途与版本', actions: '功能入口', banks: '资源库'
+  };
+  const parents = {metrics:'metrics', dimensions:'distribution', details:'uses', actions:'actions', banks:'banks'};
+  const chevron = direction => '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+
+    (direction === 'up' ? 'M5 12.5 10 7.5 15 12.5' : 'm5 7.5 5 5 5-5')+'"/></svg>';
+
+  App.register('home-config', (root, params = {}) => {
+    const settings = window.V2HomeConfig;
+    const esc = App.esc;
+    let draft = settings.load(params.layout);
+    let active = 'blocks';
+    let changed = false;
+    const groupKeys = Object.keys(groups);
+    const visible = (g,id) => !draft.hidden[g].includes(id);
+    const visibleIds = g => draft.order[g].filter(id => visible(g,id));
+    const name = (g,id) => settings.label(draft,g,id);
+    const oldTitle = () => settings.defaults().title;
+    const isActionAllowed = id => {
+      const scope={resources:'upload',annotations:'review','cooling-app':'apps','xrd-app':'apps'}[id];
+      return (!scope || App.can(scope)) && App.permitted(id);
+    };
+    function hasContent() {
+      return visibleIds('blocks').some(id => {
+        const child = Object.keys(parents).find(g=>parents[g]===id);
+        if(!child) return true;
+        const choices=visibleIds(child);
+        return child==='actions'?choices.some(isActionAllowed):choices.length>0;
+      });
+    }
+    const groupButtons = groupKeys.map(g =>
+      '<button type="button" data-hc-group="'+g+'" aria-pressed="'+(g===active)+'">'+groups[g]+'</button>').join('');
+    root.innerHTML = '<div class="hc-editor">'+
+      '<header class="hc-head"><div><h1>首页配置</h1><p>选择首页展示的指标与功能，调整名称和顺序后，可将定制首页分享给他人。</p></div>'+
+      '<div class="hc-head-actions"><a class="hc-text" href="#home">返回首页</a>'+
+      '<button type="button" class="hc-text hc-mobile-preview" data-hc-act="quick-preview">预览首页</button>'+
+      '<button type="button" class="hc-btn" data-hc-act="share">生成分享链接</button>'+
+      '<button type="button" class="hc-btn hc-primary" data-hc-act="save">保存并打开首页</button></div></header>'+
+      '<div class="hc-status" role="status" aria-live="polite"></div>'+
+      '<section class="hc-share" aria-label="定制首页分享链接" hidden><label for="hc-share-url">定制首页链接</label>'+
+      '<div class="hc-share-line"><input type="url" id="hc-share-url" data-hc-share-url readonly>'+
+      '<button type="button" class="hc-btn" data-hc-act="copy">复制链接</button>'+
+      '<a class="hc-text" data-hc-open-share target="_blank" rel="noopener">打开定制首页 ↗</a></div>'+
+      '<p>链接包含生成时的布局。调整后可重新生成链接。</p></section>'+
+      '<div class="hc-columns"><div class="hc-controls">'+
+      '<section class="hc-panel"><div class="hc-panel-head"><h2>页面设置</h2></div><div class="hc-fields">'+
+      '<label class="hc-wide">首页标题<input name="home-title" maxlength="40" autocomplete="off"></label>'+
+      '<label>页面配色<select name="home-theme"><option value="green">平台绿色</option><option value="blue">校方科技蓝</option></select></label>'+
+      '<label>默认资产分类<select name="home-dimension"></select></label></div></section>'+
+      '<section class="hc-panel"><div class="hc-panel-head"><h2>展示内容</h2><button type="button" class="hc-text" data-hc-act="reset">恢复默认配置</button></div>'+
+      '<div class="hc-groups" role="group" aria-label="配置项目类别">'+groupButtons+'</div>'+
+      '<div class="hc-list-title"><h3></h3><span></span></div><div class="hc-parent-note" hidden></div>'+
+      '<div class="hc-list"></div></section></div>'+
+      '<section class="hc-panel hc-preview"><div class="hc-panel-head"><h2>首页预览</h2>'+
+      '<button type="button" class="hc-text" data-hc-act="preview">展开预览</button></div>'+
+      '<div class="hc-preview-scroll"><div class="hc-canvas" data-hc-preview inert></div></div></section></div>'+
+      '<dialog class="hc-dialog"><div class="hc-panel-head"><h2>首页预览</h2><button type="button" class="hc-btn" data-hc-act="close-preview">关闭预览</button></div>'+
+      '<div class="hc-expanded"><div data-hc-large-preview inert></div></div></dialog></div>';
+    const editor = root.querySelector('.hc-editor');
+    const q = selector=>editor.querySelector(selector);
+    const field = n=>q('[name="home-'+n+'"]');
+    const status = q('.hc-status');
+    const share = q('.hc-share');
+    const dialog = q('dialog');
+
+    function say(message, error = false) {
+      status.textContent=message;
+      status.classList.toggle('hc-error',error);
+    }
+    function touch() {
+      changed=true;
+      share.hidden=true;
+      say('修改尚未保存。');
+    }
+    function drawPreview(target) {
+      if(!hasContent()){
+        target.innerHTML='<p class="hc-empty">勾选首页模块及其中的展示项后，即可查看预览。</p>';
+        return;
+      }
+      window.V2Assets.renderHomePreview(target,draft);
+    }
+    function preview() {
+      drawPreview(q('[data-hc-preview]'));
+      if(dialog.open) drawPreview(q('[data-hc-large-preview]'));
+    }
+    function updateDimensions() {
+      const select=field('dimension');
+      const ids=visibleIds('dimensions');
+      select.disabled=ids.length===0 || !visible('blocks','distribution');
+      if(ids.length && !ids.includes(draft.dimension))draft.dimension=ids[0];
+      select.innerHTML=ids.length?ids.map(id=>'<option value="'+id+'">'+esc(name('dimensions',id))+'</option>').join(''):'<option>暂无可选分类</option>';
+      if(ids.length)select.value=draft.dimension;
+    }
+    function refreshFields() {
+      field('title').value=draft.title;
+      field('title').placeholder=oldTitle();
+      field('theme').value=draft.theme;
+      updateDimensions();
+    }
+    function drawList() {
+      const ids=draft.order[active];
+      editor.querySelectorAll('[data-hc-group]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.hcGroup===active));
+      q('.hc-list-title h3').textContent=groups[active];
+      q('.hc-list-title span').textContent='已勾选 '+visibleIds(active).length+' / '+ids.length;
+      const note=q('.hc-parent-note');
+      const parent=parents[active];
+      note.hidden=!parent||visible('blocks',parent);
+      if(!note.hidden)note.innerHTML='所属模块“'+esc(name('blocks',parent))+'”已隐藏。 <button type="button" class="hc-text" data-hc-act="enable-parent">显示此模块</button>';
+      q('.hc-list').innerHTML=ids.map((id,index)=>{
+        const base=settings.catalog[active][id], shown=visible(active,id);
+        const title=esc(base);
+        return '<div class="hc-row" data-hc-row="'+id+'" data-visible="'+shown+'">'+
+          '<input type="checkbox" data-hc-toggle="'+id+'" aria-label="显示'+title+'" title="显示'+title+'" '+(shown?'checked':'')+'>'+
+          '<label class="hc-name"><span>'+title+'</span><input type="text" data-hc-name="'+id+'" maxlength="24" aria-label="'+title+'的展示名称" value="'+esc(name(active,id))+'" placeholder="'+title+'"></label>'+
+          '<div class="hc-move">'+['up','down'].map((dir,i)=>{
+            const label=i?'下移':'上移';
+            return '<button type="button" data-hc-move="'+dir+'" title="'+label+'" aria-label="'+label+title+'" '+((i?index===ids.length-1:index===0)?'disabled':'')+'>'+chevron(dir)+'</button>';
+          }).join('')+'</div></div>';
+      }).join('');
+    }
+    function toggle(g,id,show){
+      const current=draft.hidden[g].filter(x=>x!==id);
+      draft.hidden[g]=show?current:[...current,id];
+    }
+    function afterChange(){
+      touch();updateDimensions();drawList();preview();
+    }
+    function validate(){
+      if(hasContent())return true;
+      say('请至少显示一个模块，并为该模块勾选展示项。',true);
+      return false;
+    }
+    async function copyLink(){
+      const url=q('[data-hc-share-url]');
+      if(navigator.clipboard?.writeText){
+        try{await navigator.clipboard.writeText(url.value);say('定制首页链接已复制。');return;}catch{}
+      }
+      url.focus();url.select();
+      say('链接已选中，请使用浏览器的复制功能。');
+    }
+    editor.addEventListener('input',event=>{
+      const target=event.target;
+      if(target===field('title')){
+        draft.title=target.value.trim()||oldTitle();
+      }else if(target.hasAttribute('data-hc-name')){
+        const id=target.dataset.hcName, base=settings.catalog[active][id], value=target.value.trim();
+        if(value && value!==base)draft.names[active][id]=value;
+        else delete draft.names[active][id];
+        if(active==='dimensions')updateDimensions();
+      }else return;
+      touch();preview();
+    });
+    editor.addEventListener('focusout',event=>{
+      const target=event.target;
+      if(target===field('title'))target.value=draft.title;
+      else if(target.hasAttribute('data-hc-name'))target.value=name(active,target.dataset.hcName);
+    });
+    editor.addEventListener('change',event=>{
+      const target=event.target;
+      if(target===field('theme'))draft.theme=target.value;
+      else if(target===field('dimension'))draft.dimension=target.value;
+      else if(target.hasAttribute('data-hc-toggle')){
+        const id=target.dataset.hcToggle;
+        toggle(active,id,target.checked);afterChange();
+        q('[data-hc-toggle="'+id+'"]').focus({preventScroll:true});return;
+      }else return;
+      touch();preview();
+    });
+    editor.addEventListener('click',async event=>{
+      const button=event.target.closest('button');
+      if(!button)return;
+      if(button.hasAttribute('data-hc-group')){
+        active=button.dataset.hcGroup;drawList();return;
+      }
+      if(button.hasAttribute('data-hc-move')){
+        const id=button.closest('[data-hc-row]').dataset.hcRow;
+        const dir=button.dataset.hcMove, ids=draft.order[active], i=ids.indexOf(id);
+        const j=i+(dir==='up'?-1:1);
+        if(j<0 || j>=ids.length)return;
+        [ids[i],ids[j]]=[ids[j],ids[i]];
+        afterChange();
+        const row=q('[data-hc-row="'+id+'"]');
+        (row.querySelector('[data-hc-move="'+dir+'"]:not(:disabled)')||row.querySelector('[data-hc-move]:not(:disabled)'))?.focus({preventScroll:true});
+        return;
+      }
+      switch(button.dataset.hcAct){
+        case 'enable-parent':
+          toggle('blocks',parents[active],true);afterChange();break;
+        case 'reset':
+          draft=settings.defaults();changed=true;share.hidden=true;
+          refreshFields();drawList();preview();say('已恢复默认草稿。保存后在本机生效。');break;
+        case 'quick-preview':
+        case 'preview':
+          drawPreview(q('[data-hc-large-preview]'));dialog.showModal();break;
+        case 'close-preview':
+          dialog.close();break;
+        case 'copy':
+          await copyLink();break;
+        case 'share':{
+          if(!validate())break;
+          const url=settings.shareUrl(draft);
+          q('[data-hc-share-url]').value=url;q('[data-hc-open-share]').href=url;
+          share.hidden=false;say('定制首页链接已生成，可复制给其他人。');break;
+        }
+        case 'save':
+          if(!validate())break;
+          if(settings.save(draft)){changed=false;App.go('home');App.notify('首页配置已在本机保存。');}
+          else say('此浏览器无法保存配置。可生成分享链接保留当前方案。',true);
+          break;
+      }
+    });
+    q('[data-hc-share-url]').addEventListener('click',e=>e.target.select());
+    dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+    q('a[href="#home"]').addEventListener('click',event=>{
+      if(!changed || window.confirm('返回首页将放弃尚未保存的修改。确定返回？'))return;
+      event.preventDefault();
+    });
+    refreshFields();drawList();preview();
+  });
 })();
 
 </script>
