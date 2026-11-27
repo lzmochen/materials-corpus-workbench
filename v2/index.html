@@ -552,7 +552,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
 .hc-fields{padding:15px 16px 17px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hc-fields label{display:grid;gap:5px;min-width:0;font-weight:600}
 .hc-wide{grid-column:1/-1}
-.hc-editor :is(.hc-fields input,.hc-fields select,.hc-name input,.hc-share-line input,.hc-metric-toolbar select,.hc-add-toolbar select,.hc-rule-panel select,.hc-rule-panel input){
+.hc-editor :is(.hc-fields input,.hc-fields select,.hc-name input,.hc-share-line input,.hc-metric-toolbar select,.hc-add-toolbar select,.hc-alias-tools input,.hc-rule-panel select,.hc-rule-panel input){
   min-width:0;width:100%;border:1px solid #bfcec4;background:#fff;border-radius:6px;
   padding:6px 8px;color:var(--hc-ink);font:inherit;font-weight:450;min-height:39px;
 }
@@ -571,9 +571,16 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
 .hc-metric-tools label,.hc-add-tools label{display:grid;gap:4px;min-width:0;flex:1 1 138px;font-weight:650}
 .hc-metric-tools label{max-width:190px}
 .hc-metric-tools button,.hc-add-tools button{white-space:nowrap}
-.hc-editor :is(.hc-metric-tools,.hc-add-tools) button:disabled{opacity:.55;cursor:default}
+.hc-editor :is(.hc-metric-tools,.hc-add-tools,.hc-alias-tools) button:disabled{opacity:.55;cursor:default}
 .hc-metric-toolbar p,.hc-add-toolbar p{font-size:14px;color:var(--hc-muted)}
 .hc-metric-tools+p,.hc-add-tools+p{margin-top:6px}
+.hc-entry-modes{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--hc-line)}
+.hc-entry-modes button{border:1px solid transparent;border-radius:5px;background:transparent;padding:5px 9px;color:var(--hc-muted);font:inherit;font-size:14px;cursor:pointer}
+.hc-entry-modes button:hover{background:#edf5ee}
+.hc-entry-modes button[aria-pressed="true"]{border-color:#bad6c4;background:#e6f3eb;color:var(--hc-green);font-weight:680}
+.hc-alias-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:9px 10px}
+.hc-alias-tools label{display:grid;min-width:0;gap:4px;font-weight:650}
+.hc-alias-tools .hc-btn{grid-column:1/-1;justify-self:end}
 .hc-list{padding:0 15px 6px}
 .hc-editor[data-asset-active="true"] .hc-display-panel{order:-1}
 .hc-assets{display:grid;gap:8px;padding:0 0 7px}
@@ -670,6 +677,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   .hc-head-actions .hc-btn{padding:8px 9px}
   .hc-groups{padding:9px}.hc-groups button{padding-inline:7px}
   .hc-metric-toolbar,.hc-add-toolbar{margin-inline:12px}
+  .hc-alias-tools{grid-template-columns:1fr}
   .hc-rule-panel{grid-column:1/-1}
   .hc-dialog{width:96vw}
 }
@@ -983,6 +991,11 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       standards:{label:'标准资料库', dimension:'kind', value:'标准资料', icon:'file', desc:'查阅标准及规范资料'}
     }
   };
+  const actionTargets = {
+    ...catalog.actions,
+    ...Object.fromEntries(Object.entries(addOptions.actions).map(([id,{label}])=>[id,label]))
+  };
+  const actionAliasLimit = 8;
   const groupNames = Object.keys(catalog);
   const metricGroups = ['metrics','useMetrics'];
   const metricSources = {
@@ -1007,7 +1020,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const config = {
       v:1, title:'数据资产总览看板', theme:'green', dimension:'kind', order:{}, hidden:{}, names:{},
       custom:{metrics:{}, useMetrics:{}}, rules:{metrics:{}, useMetrics:{}}, limits:{metrics:0, useMetrics:0},
-      assetValues:{}
+      assetValues:{}, actionAliases:{}
     };
     for (const group of groupNames) {
       config.order[group] = Object.keys(catalog[group]);
@@ -1020,6 +1033,21 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   function cleanText(value, limit) {
     if (typeof value !== 'string') return '';
     return Array.from(value.replace(/[\x00-\x1F\x7F]/g, ' ').trim()).slice(0, limit).join('');
+  }
+  function normalizedActionAlias(entry) {
+    if (typeof entry?.target !== 'string' || !Object.hasOwn(actionTargets,entry.target)) return null;
+    const label = cleanText(entry.label,24);
+    return label ? {target:entry.target,label} : null;
+  }
+  function normalizeActionAliases(input) {
+    const aliases = [];
+    for (const [id,entry] of Object.entries(input ?? {})) {
+      if (!/^shortcut-[1-9]\d{0,5}$/.test(id)) continue;
+      const alias = normalizedActionAlias(entry);
+      if (alias) aliases.push([id,alias]);
+      if (aliases.length === actionAliasLimit) break;
+    }
+    return Object.fromEntries(aliases);
   }
   function validIds(input, ids) {
     return Array.isArray(input) ? [...new Set(input.filter(id => ids.includes(id)))] : [];
@@ -1134,6 +1162,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     cfg.title = cleanText(input.title,40) || cfg.title;
     if (input.theme === 'blue') cfg.theme = 'blue';
     cfg.assetValues = normalizeAssetValues(input.assetValues);
+    cfg.actionAliases = normalizeActionAliases(input.actionAliases);
     for (const group of metricGroups) {
       const entries = Object.entries(input.custom?.[group] ?? {}).filter(([id])=>/^custom-[a-z0-9-]{1,16}$/.test(id));
       for (const [id,title] of entries.slice(0,metricLimit)) {
@@ -1144,7 +1173,8 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       if (Number.isInteger(limit) && limit > 0) cfg.limits[group] = Math.min(maxItems,limit);
     }
     for (const group of groupNames) {
-      const baseIds = [...Object.keys(catalog[group]),...Object.keys(cfg.custom[group] || {})];
+      const custom = group === 'actions' ? cfg.actionAliases : cfg.custom[group];
+      const baseIds = [...Object.keys(catalog[group]),...Object.keys(custom ?? {})];
       const priority = validIds(input.order?.[group],[...baseIds,...Object.keys(addOptions[group] || {})]);
       const ids = [...priority,...baseIds.filter(id=>!priority.includes(id))];
       cfg.order[group] = ids;
@@ -1174,7 +1204,8 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     return limit > 0 ? selected.slice(0,limit) : selected;
   }
   function baseLabel(cfg, group, id) {
-    return cfg.custom?.[group]?.[id] || catalog[group]?.[id] || addOptions[group]?.[id]?.label;
+    const aliasLabel = group === 'actions' ? cfg.actionAliases?.[id]?.label : undefined;
+    return aliasLabel || cfg.custom?.[group]?.[id] || catalog[group]?.[id] || addOptions[group]?.[id]?.label;
   }
   function label(cfg, group, id) {
     return cfg.names[group][id] || baseLabel(cfg,group,id);
@@ -1188,12 +1219,34 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     cfg.order[group].push(id);
     return true;
   }
-  function removeItem(cfg, group, id) {
-    if (!Object.hasOwn(addOptions,group) || !Object.hasOwn(addOptions[group],id) || !cfg.order[group].includes(id)) return false;
+  function removeOrderedItem(cfg, group, id) {
     cfg.order[group] = cfg.order[group].filter(value=>value!==id);
     cfg.hidden[group] = cfg.hidden[group].filter(value=>value!==id);
     delete cfg.names[group][id];
+  }
+  function removeItem(cfg, group, id) {
+    if (!Object.hasOwn(addOptions,group) || !Object.hasOwn(addOptions[group],id) || !cfg.order[group].includes(id)) return false;
+    removeOrderedItem(cfg,group,id);
     if (group === 'dimensions' && cfg.dimension === id) cfg.dimension = visible(cfg,group)[0] || 'kind';
+    return true;
+  }
+  function actionTarget(cfg, id) {
+    return cfg?.actionAliases?.[id]?.target ?? id;
+  }
+  function addActionAlias(cfg, target, name) {
+    const alias = normalizedActionAlias({target,label:name});
+    if (!alias || Object.keys(cfg.actionAliases).length >= actionAliasLimit) return null;
+    let index = 1;
+    while (Object.hasOwn(cfg.actionAliases,'shortcut-'+index)) index++;
+    const id = 'shortcut-'+index;
+    cfg.actionAliases[id] = alias;
+    cfg.order.actions.push(id);
+    return id;
+  }
+  function removeActionAlias(cfg, id) {
+    if (!Object.hasOwn(cfg.actionAliases,id)) return false;
+    delete cfg.actionAliases[id];
+    removeOrderedItem(cfg,'actions',id);
     return true;
   }
   function addMetric(cfg, group) {
@@ -1233,11 +1286,12 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       }
     }
     if (Object.keys(cfg.assetValues).length) changes.assetValues = cfg.assetValues;
+    if (Object.keys(cfg.actionAliases).length) changes.actionAliases = cfg.actionAliases;
     const bytes = new TextEncoder().encode(JSON.stringify(changes));
     return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   }
   function decode(token) {
-    if (typeof token !== 'string' || !/^[\w-]{1,20000}$/.test(token)) return null;
+    if (typeof token !== 'string' || !/^[\w-]{1,28000}$/.test(token)) return null;
     try {
       const binary = atob(token.replace(/-/g,'+').replace(/_/g,'/'));
       const bytes = Uint8Array.from(binary,c => c.charCodeAt(0));
@@ -1265,6 +1319,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
   window.V2HomeConfig = {
     catalog,addOptions,metricGroups,metricSources,metricSourceUnits,metricModes,metricLimit,metricValueMax,unitsFor,
     assetBreakdowns,assetSnapshot,
+    actionTargets,actionAliasLimit,actionTarget,addActionAlias,removeActionAlias,
     defaults,normalize,load,save,visible,baseLabel,label,availableItems,addItem,removeItem,defaultRule,addMetric,removeMetric,encode,decode,shareUrl
   };
 })();
@@ -1566,14 +1621,16 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const action=Object.hasOwn(defaultActions,id)?defaultActions[id]:Object.hasOwn(options,id)?options[id]:null;
     return action&&A.permitted(action.route)&&(!action.capability||can(action.capability))?action:null;
   }
-  const canShowHomeAction = id => !!homeAction(id);
+  const canShowHomeAction = (id,cfg) => !!homeAction(cfg?window.V2HomeConfig.actionTarget(cfg,id):id);
   function workLinks(cfg,block='actions',ids=visible(cfg,'actions')){
     const cells=ids.flatMap(id=>{
-      const action=homeAction(id);
+      const target=window.V2HomeConfig.actionTarget(cfg,id);
+      const action=homeAction(target);
       if(!action)return [];
       const {icon,desc}=action;
       const label=block==='workflow-shortcuts'?esc(action.label):homeLabel(cfg,'actions',id);
-      return [button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+label+'</strong><small>'+esc(desc)+'</small></span>'+i('right'),'work',kv('v',id),'ax-bank')];
+      const attrs=kv('v',target)+(id===target?'':' '+kv('action-id',id));
+      return [button('<span class="ax-iconbox">'+i(icon)+'</span><span><strong>'+label+'</strong><small>'+esc(desc)+'</small></span>'+i('right'),'work',attrs,'ax-bank')];
     });
     return cells.length?panel(homeLabel(cfg,'blocks',block),'<div class="ax-work" data-count="'+cells.length+'">'+cells.join('')+'</div>'):'';
   }
@@ -1935,6 +1992,9 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     let active = Object.hasOwn(groups,params.section) ? params.section : 'assetValues';
     let openMetric = '';
     let changed = false;
+    let entryMode = 'platform';
+    let aliasName = '';
+    let aliasTarget = '';
     const invalidValues = new Map();
     const invalidAssets = new Map();
     const assetExpanded = new Set(['scope','use']);
@@ -1946,7 +2006,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     const isMetric = g => settings.metricGroups.includes(g);
     const measurement = source => settings.metricSourceUnits[source];
     const oldTitle = () => settings.defaults().title;
-    const isActionAllowed = id => window.V2Assets.canShowHomeAction(id);
+    const isActionAllowed = id => window.V2Assets.canShowHomeAction(id,draft);
     function hasContent() {
       return visibleIds('blocks').some(id => {
         if(id==='uses')return visibleIds('details').some(section=>section!=='indicators'||settings.visible(draft,'useMetrics').length);
@@ -1970,7 +2030,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       '<div class="hc-share-line"><input type="url" id="hc-share-url" data-hc-share-url readonly>'+
       '<button type="button" class="hc-btn" data-hc-act="copy">复制链接</button>'+
       '<a class="hc-text" data-hc-open-share target="_blank" rel="noopener">打开定制首页 ↗</a></div>'+
-      '<p>链接包含生成时的配置、指标名称及手工填写的数值。调整后可重新生成链接。</p></section>'+
+      '<p>链接包含生成时的首页配置，包括自定义入口、指标名称及手工填写的数值。调整后可重新生成链接。</p></section>'+
       '<div class="hc-columns"><div class="hc-controls">'+
       '<section class="hc-panel"><div class="hc-panel-head"><h2>页面设置</h2></div><div class="hc-fields">'+
       '<label class="hc-wide">首页标题<input name="home-title" maxlength="40" autocomplete="off"></label>'+
@@ -2077,18 +2137,39 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
         '<button type="button" class="hc-btn" data-hc-act="add-metric" '+(count>=settings.metricLimit?'disabled':'')+'>新增指标</button></div>'+
         '<p>'+(count>=settings.metricLimit?'已达到 '+settings.metricLimit+' 个自定义指标上限。':'按勾选后的顺序展示，可通过上移、下移调整。')+'</p>';
     }
+    function customEntryForm(){
+      if(Object.keys(draft.actionAliases).length>=settings.actionAliasLimit)
+        return '<p>已添加 '+settings.actionAliasLimit+' 个自定义入口。移除一项后可继续添加。</p>';
+      const choices=Object.fromEntries(Object.entries(settings.actionTargets).filter(([id])=>isActionAllowed(id)));
+      if(!Object.keys(choices).length)return '<p>当前人员暂无可绑定的平台功能。</p>';
+      if(!Object.hasOwn(choices,aliasTarget))aliasTarget='';
+      return '<form class="hc-alias-tools" data-hc-alias-form>'+
+        '<label>首页显示名称<input type="text" data-hc-alias-name maxlength="24" autocomplete="off" placeholder="如 模型评测工作台" value="'+esc(aliasName)+'" required></label>'+
+        '<label>绑定平台功能<select data-hc-alias-target required>'+options({'':'请选择',...choices},aliasTarget)+'</select></label>'+
+        '<button type="submit" class="hc-btn hc-primary" data-hc-act="add-alias" '+(!aliasName.trim()||!aliasTarget?'disabled':'')+'>添加自定义入口</button></form>';
+    }
+    function refreshAliasButton(){
+      q('[data-hc-act="add-alias"]').disabled=!aliasName.trim()||!aliasTarget;
+    }
     function drawItemToolbar(){
       const toolbar=q('.hc-add-toolbar');
       const labels=addLabels[active];
       toolbar.hidden=!labels;
       if(!labels)return;
+      const modes=active==='actions'?'<div class="hc-entry-modes" role="group" aria-label="功能入口类型">'+
+        '<button type="button" data-hc-entry-mode="platform" aria-pressed="'+(entryMode==='platform')+'">平台功能</button>'+
+        '<button type="button" data-hc-entry-mode="custom" aria-pressed="'+(entryMode==='custom')+'">自定义入口</button></div>':'';
+      if(active==='actions'&&entryMode==='custom'){
+        toolbar.innerHTML=modes+customEntryForm();
+        return;
+      }
       const candidates=settings.availableItems(draft,active).filter(id=>active!=='actions'||isActionAllowed(id));
       if(!candidates.length){
-        toolbar.innerHTML='<p>当前没有更多可添加的项目。</p>';
+        toolbar.innerHTML=modes+'<p>当前没有更多可添加的项目。</p>';
         return;
       }
       const choices=Object.fromEntries(candidates.map(id=>[id,settings.addOptions[active][id].label]));
-      toolbar.innerHTML='<div class="hc-add-tools"><label>'+labels[0]+
+      toolbar.innerHTML=modes+'<div class="hc-add-tools"><label>'+labels[0]+
         '<select data-hc-option aria-describedby="hc-add-description">'+options({'':'请选择',...choices},'')+'</select></label>'+
         '<button type="button" class="hc-btn" data-hc-act="add-item" disabled>'+labels[1]+'</button></div>'+
         '<p id="hc-add-description" hidden></p>';
@@ -2216,15 +2297,17 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       q('.hc-list').innerHTML=ids.map((id,index)=>{
         const base=baseName(active,id), shown=visible(active,id);
         const title=esc(base);
+        const alias=active==='actions'&&draft.actionAliases[id];
         const added=settings.addOptions[active]?.[id];
         const canOpen=active!=='actions'||isActionAllowed(id);
+        const rowLabel=alias?'打开 '+esc(settings.actionTargets[alias.target]):title;
         return '<div class="hc-row" data-hc-row="'+id+'" data-visible="'+shown+'">'+
           '<input type="checkbox" data-hc-toggle="'+id+'" aria-label="显示'+title+'" title="显示'+title+'" '+(shown?'checked':'')+'>'+
-          '<label class="hc-name"><span>'+title+(canOpen?'':' · 当前人员无访问权限')+'</span><input type="text" data-hc-name="'+id+'" maxlength="24" aria-label="'+title+'的展示名称" value="'+esc(name(active,id))+'" placeholder="'+title+'"></label>'+
+          '<label class="hc-name"><span>'+rowLabel+(canOpen?'':' · 当前人员无访问权限')+'</span><input type="text" data-hc-name="'+id+'" maxlength="24" aria-label="'+title+'的展示名称" value="'+esc(name(active,id))+'" placeholder="'+title+'"></label>'+
           '<div class="hc-move">'+['up','down'].map((dir,i)=>{
             const label=i?'下移':'上移';
             return '<button type="button" data-hc-move="'+dir+'" title="'+label+'" aria-label="'+label+title+'" '+((i?index===ids.length-1:index===0)?'disabled':'')+'>'+chevron(dir)+'</button>';
-          }).join('')+(added?'<button type="button" class="hc-remove-item" data-hc-act="remove-item" aria-label="移除'+esc(name(active,id))+'">移除</button>':'')+'</div>'+
+          }).join('')+(added||alias?'<button type="button" class="hc-remove-item" data-hc-act="remove-item" aria-label="移除'+esc(name(active,id))+'">移除</button>':'')+'</div>'+
           (metrics?'<div class="hc-rule-bar"><span>'+esc(settings.metricModes[draft.rules[active][id]?.mode||'default'])+
           (shown&&!included.includes(id)?' · 超出展示数量':'')+'</span>'+
           '<button type="button" class="hc-text" data-hc-act="metric-rule" aria-label="'+title+'的取值规则" aria-expanded="'+(openMetric===id)+'" aria-controls="hc-rule-'+id+'">'+
@@ -2273,7 +2356,9 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
     }
     editor.addEventListener('input',event=>{
       const target=event.target;
-      if(target.hasAttribute('data-hc-asset-value')){
+      if(target.hasAttribute('data-hc-alias-name')){
+        aliasName=target.value;refreshAliasButton();return;
+      }else if(target.hasAttribute('data-hc-asset-value')){
         editAsset(target);return;
       }else if(target===field('title')){
         draft.title=target.value.trim()||oldTitle();
@@ -2312,6 +2397,9 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       const target=event.target;
       if(target===field('theme'))draft.theme=target.value;
       else if(target===field('dimension'))draft.dimension=target.value;
+      else if(target.hasAttribute('data-hc-alias-target')){
+        aliasTarget=target.value;refreshAliasButton();return;
+      }
       else if(target.hasAttribute('data-hc-option')){
         q('[data-hc-act="add-item"]').disabled=!target.value;
         const description=q('#hc-add-description');
@@ -2349,11 +2437,31 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
       }else return;
       touch();preview();
     });
+    editor.addEventListener('submit',event=>{
+      if(!event.target.hasAttribute('data-hc-alias-form'))return;
+      event.preventDefault();
+      if(!isActionAllowed(aliasTarget))return;
+      const id=settings.addActionAlias(draft,aliasTarget,aliasName);
+      if(!id){
+        say('请检查入口名称及绑定功能。',true);
+        return;
+      }
+      aliasName='';
+      afterChange();
+      say('已添加自定义入口，保存后生效。');
+      (q('[data-hc-alias-name]')||q('[data-hc-row="'+id+'"] [data-hc-name]')).focus();
+    });
     editor.addEventListener('click',async event=>{
       const button=event.target.closest('button');
       if(!button)return;
       if(button.hasAttribute('data-hc-group')){
         active=button.dataset.hcGroup;openMetric='';drawList();return;
+      }
+      if(button.hasAttribute('data-hc-entry-mode')){
+        entryMode=button.dataset.hcEntryMode;
+        drawItemToolbar();
+        q('[data-hc-entry-mode="'+entryMode+'"]').focus({preventScroll:true});
+        return;
       }
       if(button.hasAttribute('data-hc-asset-reset')){
         const section=button.closest('[data-hc-asset-section]');
@@ -2391,9 +2499,11 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
           const id=button.closest('[data-hc-row]').dataset.hcRow;
           const ids=draft.order[active], index=ids.indexOf(id);
           const next=ids[index+1]||ids[index-1];
-          if(!settings.removeItem(draft,active,id))break;
+          const removed=active==='actions'&&draft.actionAliases[id]?
+            settings.removeActionAlias(draft,id):settings.removeItem(draft,active,id);
+          if(!removed)break;
           afterChange();
-          (q('[data-hc-toggle="'+next+'"]')||q('[data-hc-option]')||q('[data-hc-group="'+active+'"]')).focus({preventScroll:true});
+          (q('[data-hc-toggle="'+next+'"]')||q('[data-hc-option]')||q('[data-hc-alias-name]')||q('[data-hc-group="'+active+'"]')).focus({preventScroll:true});
           break;
         }
         case 'enable-parent':
@@ -2427,6 +2537,7 @@ ustb-v2-evaluation{display:block;--ve-ink:#172b27;--ve-sub:#4c625a;--ve-line:#d6
         }
         case 'reset':
           draft=settings.defaults();changed=true;share.hidden=true;
+          aliasName='';aliasTarget='';
           openMetric='';invalidValues.clear();invalidAssets.clear();
           refreshFields();drawList();preview();say('已恢复默认草稿。保存后在本机生效。');break;
         case 'quick-preview':
